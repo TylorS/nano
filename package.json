@@ -1,0 +1,32 @@
+{
+  "name": "nano-ts",
+  "version": "0.0.0",
+  "description": "Lightweight iterator and open variant types for TypeScript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc",
+    "lint": "oxlint src",
+    "format": "oxfmt src",
+    "format:check": "oxfmt --check src"
+  },
+  "keywords": [
+    "iterator",
+    "open variant",
+    "typescript"
+  ],
+  "author": "Tylor Steinberger <tlsteinberger167@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "oxfmt": "^0.9.0",
+    "oxlint": "^1.25.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.5"
+  },
+  "dependencies": {
+    "hkt-core": "^1.2.1"
+  }
+}
