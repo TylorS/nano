@@ -1,4 +1,4 @@
-# nano-ts
+# @typed/nano
 
 Small DSLs and interpeter utilities atop of iterators and open variants.
 
@@ -11,17 +11,17 @@ Small DSLs and interpeter utilities atop of iterators and open variants.
 ## Installation
 
 ```bash
-npm install nano-ts
+npm install @typed/nano
 # or
-yarn add nano-ts
+yarn add @typed/nano
 # or
-pnpm add nano-ts
+pnpm add @typed/nano
 ```
 
 ## Usage
 
 ```typescript
-import * as Nano from "nano-ts";
+import * as Nano from "@typed/nano";
 ```
 
 ## API
@@ -623,7 +623,7 @@ const unified = Nano.unify(someFunction);
 ### Building a Closed Effect System
 
 ```typescript
-import * as Nano from "nano-ts";
+import * as Nano from "@typed/nano";
 
 // Define a closed Effect type
 interface Effect<A, E = never, R = never>
@@ -665,7 +665,7 @@ const result = runEffect(program, env);
 ### Pattern Matching
 
 ```typescript
-import * as Nano from "nano-ts";
+import * as Nano from "@typed/nano";
 
 class Click extends Nano.variant("Click") {}
 class Hover extends Nano.variant("Hover") {}

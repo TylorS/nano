@@ -1,10 +1,13 @@
 {
-  "name": "nano-ts",
+  "name": "@typed/nano",
   "version": "0.0.1",
   "description": "Lightweight iterator and open variant types for TypeScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "vitest run",
     "build": "tsc",
