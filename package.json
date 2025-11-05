@@ -1,6 +1,6 @@
 {
   "name": "nano-ts",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Lightweight iterator and open variant types for TypeScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
