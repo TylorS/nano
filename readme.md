@@ -521,6 +521,8 @@ Create an iterator that yields once then returns.
 
 ```typescript
 const iter = Nano.Iterator.once<string>()(42);
+console.log(iter.next()); // { value: 42, done: false }
+console.log(iter.next("hello")); // { value: "hello", done: true }
 ```
 
 #### `Iterator.success`
@@ -529,6 +531,7 @@ Create an iterator that immediately returns.
 
 ```typescript
 const iter = Nano.Iterator.success(42);
+console.log(iter.next()); // { value: 42, done: true }
 ```
 
 #### `Iterator.map`
@@ -632,10 +635,10 @@ interface Effect<A, E = never, R = never>
 // Helper to run effects
 const runEffect = <A, E, R = never>(
   effect: Effect<A, E, R>,
-  env: Nano.Env<R> = Nano.Env.empty(),
+  ...[env]: [R] extends [never] ? [] : [Nano.Env<R>]
 ): Nano.Result<A, E> => {
   return effect.pipe(
-    Nano.provideAll(env.merge(Nano.Refs.empty())),
+    Nano.provideAll((env || Nano.Env.empty()).merge(Nano.Refs.empty())),
     Nano.result,
     Nano.run,
   );
