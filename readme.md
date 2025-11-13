@@ -731,6 +731,7 @@ Unification operates on types that implement the unify protocol (types with a `[
 - `Success<A>` - Unifies to merge success value types
 - `Failure<E>` - Unifies to merge error types  
 - `GetEnv<R>` - Unifies to merge environment requirement types
+- `Emit<A>` - Unifies to merge emitted value types
 
 #### `Unify`
 
