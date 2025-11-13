@@ -605,21 +605,200 @@ const result = Nano.Iterator.done(42);
 
 Type-level utilities for unifying types (advanced).
 
+#### What is Unification?
+
+Unification is a type-level operation that simplifies unions by merging compatible type parameters. When you have multiple instances of the same unifiable type with different type parameters, unification combines them into a single instance with a union of those parameters.
+
+For example, instead of:
+```typescript
+Success<string> | Success<number> | Success<boolean>
+```
+
+Unification produces:
+```typescript
+Success<string | number | boolean>
+```
+
+This makes types more manageable and improves type inference in complex scenarios.
+
+#### Why is Unification Useful?
+
+1. **Simplifies Complex Unions**: When working with effect systems or result types, you often end up with unions like `Success<A> | Success<B> | Success<C>`. Unification collapses these into `Success<A | B | C>`, making the types easier to work with.
+
+2. **Better Type Inference**: Simplified types help TypeScript's inference engine work more effectively, reducing the need for explicit type annotations.
+
+3. **Cleaner Type Signatures**: Functions that return unified types have cleaner, more readable signatures.
+
+4. **Protocol-Based**: Only types that implement the unify protocol are affected. Primitives, plain objects, and other non-unifiable types remain unchanged, ensuring no unexpected behavior.
+
+#### How It Works
+
+Unification operates on types that implement the unify protocol (types with a `[unifySymbol]` property). Built-in unifiable types include:
+- `Success<A>` - Unifies to merge success value types
+- `Failure<E>` - Unifies to merge error types  
+- `GetEnv<R>` - Unifies to merge environment requirement types
+
 #### `Unify`
 
-Unify types that implement the unify protocol.
+The `Unify` type operator processes a type and unifies any unifiable types within it.
 
 ```typescript
-type Unified = Nano.Unify<SomeType>;
+import type { Unify, Success, Failure } from "@typed/nano";
+
+// Single type - no change
+type A = Unify<Success<string>>;
+// A = Success<string>
+
+// Union of same type - parameters merged
+type B = Unify<Success<string> | Success<number>>;
+// B = Success<string | number>
+
+// Different unifiable types - remain separate
+type C = Unify<Success<string> | Failure<Error>>;
+// C = Success<string> | Failure<Error>
+
+// Mixed with non-unifiable types - only unifiable types unified
+type D = Unify<Success<string> | number>;
+// D = Success<string> | number
+
+// Nested structures are processed recursively
+type E = Unify<Success<Success<string> | Success<number>>>;
+// E = Success<Success<string | number>>
 ```
 
 #### `unify`
 
-Unify function types.
+The `unify` function applies unification to function return types, making it easy to unify functions that return unifiable types.
 
 ```typescript
-const unified = Nano.unify(someFunction);
+import { unify } from "@typed/nano";
+import { success } from "@typed/nano";
+
+// Function that returns Success<string> | Success<number>
+const getValue = (x: boolean) => 
+  x ? success("hello") : success(42);
+
+// Unify the return type
+const unified = unify(getValue);
+// unified: (x: boolean) => Success<string | number>
+
+// Now you can use it with better type inference
+const result = unified(true);
+// result: Success<string | number>
 ```
+
+#### Implementing the Unify Protocol
+
+To make your own types unifiable, implement the unify protocol:
+
+```typescript
+import { unifySymbol } from "@typed/nano";
+import type { Arg0, TypeLambda1 } from "hkt-core";
+import type { Unify, Lambdas } from "@typed/nano";
+
+class MyType<A> {
+  constructor(readonly value: A) {}
+  
+  // Mark as unifiable
+  [unifySymbol]?: MyType.Unify;
+}
+
+declare namespace MyType {
+  export interface Unify extends Lambdas {
+    make: Make;
+    get: Get;
+  }
+
+  export interface Make extends TypeLambda1 {
+    return: MyType<Arg0<this>>;
+  }
+
+  export interface Get extends TypeLambda1 {
+    return: Arg0<this> extends MyType<infer A> ? [A] : never;
+  }
+}
+
+// Now MyType can be unified
+type Unified = Unify<MyType<string> | MyType<number>>;
+// Unified = MyType<string | number>
+```
+
+#### Real-World Example: Emit Pattern - Single Handler Semantics
+
+Unification enables proper type-level representation of semantic meaning. The `Emit` type demonstrates this beautifully: **all `Emit` values are handled by exactly one observer**, regardless of their value types. Unification ensures the type system correctly models this semantics.
+
+```typescript
+import { emit, observe } from "@typed/nano";
+import * as Nano from "@typed/nano";
+
+// The semantic meaning of Emit: all emitted values go to ONE handler
+// This is a fundamental property of the Emit abstraction
+
+// Without unification, the type system can't properly represent this:
+// type Program = Nano.Nano<Y | Emit<string> | Emit<number>, R>
+// TypeScript sees these as separate variants that might need different handlers
+// This MISREPRESENTS the semantics - there's only ONE handler!
+
+// With unification, the type correctly represents the semantics:
+// type Program = Nano.Nano<Y | Emit<string | number>, R>
+// The type system now knows: all Emit values → one handler
+
+// The observe function signature reflects the single-handler semantics:
+const observe = <Y, A, R, Y2, R2>(
+  nano: Nano.Nano<Y | Emit<A>, R>,
+  onEmit: (value: A) => Nano.Nano<Y2, R2>,  // ONE handler for all Emit<A>
+  // Reliably, we know that `Y` does *not* contain Emit<A>. This is not true without unification.
+): Nano.Nano<Y | Y2, R> => {
+  // All Emit values (regardless of their type parameter) go to the same handler
+  return Nano.flatMapInput(nano, (y) => {
+    if (isEmit(y)) {
+      return onEmit(y.value); // Single handler receives all emit values
+    }
+    return Nano.yield(y);
+  });
+};
+
+// Usage: Multiple emit types with different value types
+const program = Nano.make(function* () {
+  yield* emit("hello");  // Emit<string>
+  yield* emit(42);       // Emit<number>
+  yield* emit(true);     // Emit<boolean>
+  return "done";
+});
+
+// Unification ensures the type correctly represents the semantics:
+// All three emit calls → ONE handler
+// Type: Nano.Nano<Emit<string | number | boolean>, string>
+// This matches reality: observe provides exactly ONE handler function
+
+const observed = observe(program, (value) => {
+  // This ONE handler receives ALL emit values
+  // value: string | number | boolean (unified!)
+  // The type system correctly models: one handler, multiple value types
+  return Nano.sync(() => console.log(value));
+});
+```
+
+**The Key Insight**: 
+
+The semantic meaning of `Emit` is that **all emitted values are handled by exactly one observer**. Without unification, TypeScript would see `Emit<string> | Emit<number> | Emit<boolean>` as separate variants, suggesting they might need different handlers. This misrepresents the actual semantics.
+
+With unification, these become `Emit<string | number | boolean>`, correctly representing that:
+1. There is **one handler** (the `onEmit` function)
+2. That handler receives **all emit values** regardless of their type
+3. The type parameter `A` in `Emit<A>` represents the union of all possible emitted value types
+
+This enables the type system to accurately model the runtime behavior: `observe` provides exactly one handler function that processes all `Emit` values, and unification ensures the types reflect this single-handler semantics at the type level.
+
+#### When to Use Unification
+
+- **Effect Systems**: When building effect systems where you need to combine multiple effects of the same type
+- **Result Types**: When working with result types that may have multiple success or error variants
+- **Complex Type Transformations**: When you need to simplify complex union types for better type inference
+- **Function Composition**: When composing functions that return unifiable types and you want cleaner return types
+- **Variant Handling**: When you need to handle multiple variants of the same type with different parameters (like `Emit<string> | Emit<number>`) in a unified way
+
+**Note**: Unification is an advanced feature. Most users won't need to use it directly, but it's essential for the internal workings of nano-ts's type system, especially when working with iterators and effect composition.
 
 ## Examples
 

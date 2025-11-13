@@ -69,6 +69,9 @@ export const make: {
 export const of = <R>(value: R): Nano<never, R> =>
   fromIterator(() => Iterator.success(value));
 
+export const sync = <R>(f: () => R): Nano<never, R> =>
+  fromIterator(() => Iterator.sync<R>(f));
+
 export const map: {
   <R1, R2>(f: (value: R1) => R2): <Y1>(nano: Nano<Y1, R1>) => Nano<Y1, R2>;
   <Y1, R1, R2>(nano: Nano<Y1, R1>, f: (value: R1) => R2): Nano<Y1, R2>;
@@ -126,13 +129,13 @@ const flatMap_ = <Y1, R1, Y2, R2>(
   );
 
 export const flatMapInput: {
-  <Y1, Y2, R2>(
-    f: (value: Y1) => Nano<Y2, R2>,
-  ): <R1>(nano: Nano<Y1, R1>) => Nano<Y2, R1>;
-  <Y1, R1, Y2, R2>(
+  <Y1, N2 extends Nano<any, any>>(
+    f: (value: Y1) => N2,
+  ): <R1>(nano: Nano<Y1, R1>) => Nano<Nano.Yield<N2>, R1>;
+  <Y1, R1, N2 extends Nano<any, any>>(
     nano: Nano<Y1, R1>,
-    f: (value: Y1) => Nano<Y2, R2>,
-  ): Nano<Y2, R1>;
+    f: (value: Y1) => N2,
+  ): Nano<Nano.Yield<N2>, R1>;
 } = (...args: any[]): any => {
   if (args.length === 1) {
     return (nano: Nano<any, any>) => flatMapInput_(nano, args[0]);
@@ -176,3 +179,8 @@ const mapBoth_ = <Y1, R1, Y2, R2>(
 
 export const run = <R>(nano: Nano<never, R>): R =>
   Iterator.get(nano).next().value;
+
+const yield_ = <Y>(value: Y): Nano<Y, unknown> =>
+  fromIterator(() => Iterator.once<unknown>()(value));
+
+export { yield_ as yield };

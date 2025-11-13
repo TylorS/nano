@@ -4,7 +4,7 @@ import * as Nano from "./Nano.js";
 import * as Unify from "./Unify.js";
 import { variant } from "./Variant.js";
 
-export class Failure<E>
+export class Failure<out E>
   extends variant("Failure")
   implements Nano.Nano<Failure<E>, never>
 {
@@ -33,7 +33,7 @@ export declare namespace Failure {
   }
 }
 
-export class Success<A>
+export class Success<out A>
   extends variant("Success")
   implements Nano.Nano<never, A>
 {
@@ -104,3 +104,40 @@ export const result = <Y, R>(
     }
     return success(result.value);
   });
+
+const catchFailure_ = <Y, E, R, N2 extends Nano.Nano.Any>(
+  nano: Nano.Nano<Y | Failure<E>, R>,
+  onFailure: (error: E) => N2,
+): Nano.Nano<Y | Nano.Nano.Yield<N2>, R | Nano.Nano.Return<N2>> =>
+  Nano.fromIterator(function* () {
+    const iterator = Iterator.get(nano);
+    let result = iterator.next();
+    while (!result.done) {
+      const value = result.value;
+      if (isFailure(value)) return yield* onFailure(value.error);
+      result = iterator.next(yield value as Result.ExcludeFailure<Y>);
+    }
+    return result.value;
+  });
+
+export const catchFailure: {
+  <N1 extends Nano.Nano.Any, N2 extends Nano.Nano.Any>(
+    onFailure: (error: Result.FailureFromYield<Nano.Nano.Yield<N1>>) => N2,
+  ): <R>(
+    nano: Nano.Nano<N1, R>,
+  ) => Nano.Nano<
+    Result.ExcludeFailure<N1> | Nano.Nano.Yield<N2>,
+    R | Nano.Nano.Return<N2>
+  >;
+
+  <Y, E, R, N2 extends Nano.Nano.Any>(
+    nano: Nano.Nano<Y | Failure<E>, R>,
+    onFailure: (error: E) => N2,
+  ): Nano.Nano<Y | Nano.Nano.Yield<N2>, R | Nano.Nano.Return<N2>>;
+} = (args: any): any => {
+  if (args.length === 1) {
+    return (nano: Nano.Nano<any, any>) => catchFailure_(nano, args[0]);
+  } else {
+    return catchFailure_(args[0], args[1]);
+  }
+};
