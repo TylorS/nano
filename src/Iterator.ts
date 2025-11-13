@@ -34,8 +34,7 @@ class SuccessIterator<A> implements Iterator<never, A> {
   }
 }
 
-export const sync = <A>(f: () => A): Iterator<never, A> =>
-  new SyncIterator(f);
+export const sync = <A>(f: () => A): Iterator<never, A> => new SyncIterator(f);
 
 class SyncIterator<A> implements Iterator<never, A> {
   constructor(readonly value: () => A) {}

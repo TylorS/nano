@@ -71,4 +71,3 @@ const observe_ = <Y, A, R, Y2, R2>(
     }
     return Nano.yield(y);
   });
-
