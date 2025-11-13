@@ -69,6 +69,13 @@ export const make: {
 export const of = <R>(value: R): Nano<never, R> =>
   fromIterator(() => Iterator.success(value));
 
+const void_ = of<void>(undefined);
+const null_ = of<null>(null);
+const undefined_ = of<undefined>(undefined);
+const true_ = of<boolean>(true);
+const false_ = of<boolean>(false);
+export { void_ as void, null_ as null, undefined_ as undefined, true_ as true, false_ as false };
+
 export const sync = <R>(f: () => R): Nano<never, R> =>
   fromIterator(() => Iterator.sync<R>(f));
 

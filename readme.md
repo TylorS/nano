@@ -512,6 +512,99 @@ const program = Nano.make(function* () {
 });
 ```
 
+### Emit
+
+Stream events from a Nano program to observers. Emit allows programs to produce a stream of events that can be observed and handled separately from the main computation flow.
+
+#### `Emit<A>`
+
+Represents an emitted event value. It's a variant that implements Nano and yields itself, allowing it to be streamed to observers.
+
+```typescript
+const event = Nano.emit("user-clicked");
+```
+
+#### `emit`
+
+Emit an event value into the stream. Events are yielded during program execution and can be observed by an observer.
+
+```typescript
+const program = Nano.make(function* () {
+  yield* Nano.emit({ type: "started", timestamp: Date.now() });
+  const result = 42;
+  yield* Nano.emit({ type: "completed", result });
+  return result;
+});
+```
+
+#### `isEmit`
+
+Type guard to check if a value is an Emit.
+
+```typescript
+const value: unknown = Nano.emit("test");
+
+if (Nano.isEmit(value)) {
+  console.log(value.value); // "test"
+}
+```
+
+#### `observe`
+
+Subscribe an observer to the stream of emitted events. The observer receives each emitted value as the program executes, and all `Emit` effects are removed from the yield type.
+
+```typescript
+const program = Nano.make(function* () {
+  yield* Nano.emit("Event 1");
+  yield* Nano.emit("Event 2");
+  return 42;
+});
+
+const events: string[] = [];
+
+const programWithObserver = Nano.observe(program, (event) => {
+  events.push(event);
+  return Nano.void;
+});
+
+const result = Nano.run(programWithObserver);
+// result: 42
+// events: ["Event 1", "Event 2"]
+```
+
+You can also use `observe` in a pipeable way:
+
+```typescript
+const program = Nano.make(function* () {
+  yield* Nano.emit({ type: "progress", value: 25 });
+  yield* Nano.emit({ type: "progress", value: 50 });
+  yield* Nano.emit({ type: "progress", value: 75 });
+  return "done";
+}).pipe(
+  Nano.observe((event) => {
+    console.log("Progress:", event.value + "%");
+    return Nano.void;
+  })
+);
+```
+
+The observer can perform side effects, transform events, or even yield other effects:
+
+```typescript
+const program = Nano.make(function* () {
+  yield* Nano.emit("user-action");
+  return "completed";
+}).pipe(
+  Nano.observe((event) => {
+    // Observer can yield other effects
+    return Nano.make(function* () {
+      yield* Logger.log(`Observed: ${event}`);
+      return undefined;
+    });
+  })
+);
+```
+
 ### Iterator
 
 Low-level iterator utilities (use with caution - iterators are mutable).

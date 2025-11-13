@@ -1,3 +1,4 @@
+export * from "./Emit.js";
 export * from "./Env.js";
 export * from "./Error.js";
 export * from "./Nano.js";
