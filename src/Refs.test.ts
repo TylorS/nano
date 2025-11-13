@@ -4,12 +4,8 @@ import * as Nano from "./Nano.js";
 import * as Env from "./Env.js";
 
 // Helper to run a Nano with Refs environment
-const runWithRefs = <R>(nano: Nano.Nano<Env.GetEnv<Refs.Refs>, R>): R => 
-  nano.pipe(
-    Refs.withRefs,
-    Env.withEnv,
-    Nano.run,
-  )
+const runWithRefs = <R>(nano: Nano.Nano<Env.GetEnv<Refs.Refs>, R>): R =>
+  nano.pipe(Refs.withRefs, Env.withEnv, Nano.run);
 
 describe("Refs", () => {
   describe("ref", () => {

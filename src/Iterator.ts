@@ -97,7 +97,7 @@ class MapInputIterator<Y1, R1, Y2> implements Iterator<Y2, R1> {
   constructor(
     readonly iterator: Iterator<Y1, R1>,
     readonly f: (value: Y1) => Y2,
-  ) { }
+  ) {}
 
   next(value: unknown): IteratorResult<Y2, R1> {
     return this.innerNext(this.iterator.next(value));
@@ -177,7 +177,8 @@ class FlatMapIterator<Y, R1, Y2, R2> implements Iterator<Y | Y2, R2> {
 export const flatMapInput = <Y1, R1, Y2, R2>(
   iterator: Iterator<Y1, R1> | Iterator<Unify<Y1>, R1>,
   f: (value: Y1) => Iterator<Y2, R2>,
-): Iterator<Y2, R1> => FlatMapInputIterator.make(iterator as Iterator<Y1, R1>, f);
+): Iterator<Y2, R1> =>
+  FlatMapInputIterator.make(iterator as Iterator<Y1, R1>, f);
 
 class FlatMapInputIterator<Y1, R1, Y2, R2> implements Iterator<Y2, R1> {
   static make<Y1, R1, Y2, R2>(
@@ -233,7 +234,8 @@ export const mapBoth = <Y1, R1, Y2, R2>(
   iterator: Iterator<Y1, R1> | Iterator<Unify<Y1>, R1>,
   onYield: (value: Y1) => Y2,
   onReturn: (value: R1) => R2,
-): Iterator<Y2, R2> => MapBothIterator.make(iterator as Iterator<Y1, R1>, onYield, onReturn);
+): Iterator<Y2, R2> =>
+  MapBothIterator.make(iterator as Iterator<Y1, R1>, onYield, onReturn);
 
 class MapBothIterator<Y1, R1, Y2, R2> implements Iterator<Y2, R2> {
   static make<Y1, R1, Y2, R2>(
@@ -295,7 +297,6 @@ function isMapBothIterator<Y1, R1>(
 
 export const get = <I>(iterator: { readonly [Symbol.iterator]: () => I }): I =>
   iterator[Symbol.iterator]();
-
 
 export const next = <Y>(value: Y) => ({ done: false, value }) as const;
 

@@ -1,8 +1,8 @@
 export const flow2 =
   <A, B, C>(f: (a: A) => B, g: (b: B) => C): ((a: A) => C) =>
   (a: A) =>
-      g(f(a));
-  
+    g(f(a));
+
 export const identity = <A>(a: A): A => a;
 
 export interface Pipeable {

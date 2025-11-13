@@ -33,7 +33,10 @@ export declare namespace Failure {
   }
 }
 
-export class Success<A> extends variant("Success") {
+export class Success<A>
+  extends variant("Success")
+  implements Nano.Nano<never, A>
+{
   constructor(readonly value: A) {
     super();
   }

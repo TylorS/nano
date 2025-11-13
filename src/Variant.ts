@@ -91,8 +91,7 @@ export const matchOr: {
     const variant = args[0];
     const matchers = args[1];
     const fallback = args[2] ?? identity;
-    if (variant._tag in matchers)
-      return matchers[variant._tag](variant);
+    if (variant._tag in matchers) return matchers[variant._tag](variant);
     return fallback(variant);
   }
   return (variant: Variant.Any) => matchOr(variant, args[0], args[1]);
@@ -100,5 +99,8 @@ export const matchOr: {
 
 function isVariant(value: unknown): value is Variant.Any {
   if (value === null || value === undefined) return false;
-  return Object.hasOwn(value, "_tag") && typeof (value as { _tag: unknown })._tag === "string";
+  return (
+    Object.hasOwn(value, "_tag") &&
+    typeof (value as { _tag: unknown })._tag === "string"
+  );
 }

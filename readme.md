@@ -184,7 +184,7 @@ type Action = Click | Hover | KeyPress;
 Exhaustive pattern matching on variants.
 
 ```typescript
-const handleAction = action.pipe(Nano.match({
+const handleAction = (action: Action) => action.pipe(Nano.match({
   Click: (click) => "clicked",
   Hover: (hover) => "hovered",
   KeyPress: (press) => "pressed",
@@ -198,12 +198,12 @@ const result = handleAction(new Click()); // "clicked"
 Partial pattern matching with fallback.
 
 ```typescript
-const handleAction = Nano.matchOr(
+const handleAction = (action: Action) => action.pipe(Nano.matchOr(
   {
     Click: (click) => "clicked",
   },
   (other) => "not clicked"
-);
+));
 
 const result1 = handleAction(new Click()); // "clicked"
 const result2 = handleAction(new Hover()); // "not clicked"

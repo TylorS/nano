@@ -9,7 +9,7 @@
     "access": "public"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --typecheck",
     "build": "tsc",
     "lint": "oxlint src",
     "format": "oxfmt src",
@@ -23,13 +23,13 @@
   "author": "Tylor Steinberger <tlsteinberger167@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^24.9.2",
-    "oxfmt": "^0.9.0",
-    "oxlint": "^1.25.0",
+    "@types/node": "^24.10.1",
+    "oxfmt": "^0.13.0",
+    "oxlint": "^1.28.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.5"
+    "vitest": "^4.0.8"
   },
   "dependencies": {
-    "hkt-core": "^1.2.1"
+    "hkt-core": "^1.3.0"
   }
 }
