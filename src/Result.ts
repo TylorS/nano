@@ -126,7 +126,7 @@ export const catchFailure: {
   ): <R>(
     nano: Nano.Nano<N1, R>,
   ) => Nano.Nano<
-    Result.ExcludeFailure<N1> | Nano.Nano.Yield<N2>,
+    Result.ExcludeFailure<Nano.Nano.Yield<N1>> | Nano.Nano.Yield<N2>,
     R | Nano.Nano.Return<N2>
   >;
 
