@@ -30,6 +30,10 @@ export declare namespace Emit {
   export interface Get extends TypeLambda1 {
     return: Arg0<this> extends Emit<infer A> ? [A] : never;
   }
+
+  export type ExcludeAll<Y> = globalThis.Exclude<Y, Emit<any>>;
+
+  export type FromYield<Y> = Unify.Call<Unify, Y>;
 }
 
 export const emit = <A>(value: A): Emit<A> => new Emit(value);
@@ -38,16 +42,21 @@ export const isEmit = <A = unknown>(value: unknown): value is Emit<A> =>
   value ? value.constructor === Emit || value instanceof Emit : false;
 
 export const observe: {
-  <Y, A, Y2, R2>(
-    onEmit: (value: A) => Nano.Nano<Y2, R2>,
-  ): <R>(nano: Nano.Nano<Y | Emit<A>, R>) => Nano.Nano<Y | Y2, R>;
-  <Y, A, R, Y2, R2>(
-    nano: Nano.Nano<Y | Emit<A>, R>,
-    onEmit: (value: A) => Nano.Nano<Y2, R2>,
-  ): Nano.Nano<Y | Y2, R>;
-} = <Y, A, R>(...args: any): any => {
+  <N1 extends Nano.Nano.Any, N2 extends Nano.Nano.Any>(
+    onEmit: (value: Emit.FromYield<Nano.Nano.Yield<N1>>) => N2,
+  ): (
+    nano: N1,
+  ) => Nano.Nano<
+    Emit.ExcludeAll<Nano.Nano.Yield<N1 | N2>>,
+    Nano.Nano.Return<N1>
+  >;
+  <Y, R, N2 extends Nano.Nano.Any>(
+    nano: Nano.Nano<Y, R>,
+    onEmit: (value: Emit.FromYield<Y>) => N2,
+  ): Nano.Nano<Emit.ExcludeAll<Y> | Nano.Nano.Yield<N2>, R>;
+} = (...args: any): any => {
   if (args.length === 1) {
-    return (nano: Nano.Nano<Y | Emit<A>, R>) => observe_(nano, args[0]);
+    return (nano: any) => observe_(nano, args[0]);
   }
   return observe_(args[0], args[1]);
 };
@@ -62,3 +71,4 @@ const observe_ = <Y, A, R, Y2, R2>(
     }
     return Nano.yield(y);
   });
+
