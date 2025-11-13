@@ -155,7 +155,8 @@ const result = Nano.run(program); // 42
 
 #### `Nano.fromIterator`
 
-Low-level function to create a Nano from an iterator function.
+Low-level function to create a Nano from an iterator function. It's identical to `Nano.make` but avoids unification.
+This can be necessary/easier when you're programming with generics.
 
 ```typescript
 const nano = Nano.fromIterator(() => Nano.Iterator.success(42));
