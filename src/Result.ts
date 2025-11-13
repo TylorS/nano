@@ -133,7 +133,7 @@ export const catchFailure: {
   <Y, E, R, N2 extends Nano.Nano.Any>(
     nano: Nano.Nano<Y | Failure<E>, R>,
     onFailure: (error: E) => N2,
-  ): Nano.Nano<Y | Nano.Nano.Yield<N2>, R | Nano.Nano.Return<N2>>;
+  ): Nano.Nano<Result.ExcludeFailure<Y> | Nano.Nano.Yield<N2>, R | Nano.Nano.Return<N2>>;
 } = (args: any): any => {
   if (args.length === 1) {
     return (nano: Nano.Nano<any, any>) => catchFailure_(nano, args[0]);
