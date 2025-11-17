@@ -13,6 +13,34 @@ export type Unify<A, F extends Unification = never> = [
   ? [R][R extends any ? 0 : never]
   : never;
 
+export declare namespace Unify {
+  export type Args<U, T> = [Extract<U, T>] extends [never]
+    ? never
+    : Call1<GetUnification<T>["get"], Extract<U, T>>;
+
+  export type Arg0<U, T> =
+    Args<U, T> extends readonly [infer A, ...infer _] ? A : never;
+
+  export type Arg1<U, T> =
+    Args<U, T> extends readonly [infer _A, infer B, ...infer _] ? B : never;
+
+  export type Arg2<U, T> =
+    Args<U, T> extends readonly [infer _A, infer _B, infer C, ...infer _]
+      ? C
+      : never;
+
+  export type Arg3<U, T> =
+    Args<U, T> extends readonly [
+      infer _A,
+      infer _B,
+      infer _C,
+      infer D,
+      ...infer _,
+    ]
+      ? D
+      : never;
+}
+
 type FilterIn<A> = A extends {
   readonly [unifySymbol]?: infer _ extends Unification;
 }

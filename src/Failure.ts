@@ -24,8 +24,7 @@ export declare namespace Failure {
 
   export type Extract<Y> = Unify.Extract<Failure.Unify, Y>;
   export type Exclude<Y> = Unify.Exclude<Failure.Unify, Y>;
-
-  export type Error<Y> = Y extends Failure<infer E> ? E : never;
+  export type Error<Y> = Unify.Unify.Arg0<Failure.Unify, Y>;
 }
 
 export const failure = <E>(error: E): Failure<E> => new Failure(error);

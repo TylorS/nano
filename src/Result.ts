@@ -24,8 +24,7 @@ export namespace Success {
 
   export type Extract<Y> = Unify.Extract<Success.Unify, Y>;
   export type Exclude<Y> = Unify.Exclude<Success.Unify, Y>;
-
-  export type Value<Y> = Y extends Success<infer A> ? A : never;
+  export type Value<Y> = Unify.Unify.Arg0<Success.Unify, Y>;
 }
 
 export const success = <A>(value: A): Success<A> => new Success(value);
