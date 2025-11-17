@@ -345,7 +345,6 @@ To make your own types unifiable, implement the unify protocol:
 
 ```typescript
 import * as Nano from "@typed/nano";
-import type { Arg0, TypeLambda1 } from "hkt-core";
 
 class MyType<A> {
   constructor(readonly value: A) {}
@@ -362,15 +361,15 @@ declare namespace MyType {
   }
 
   /** Construct a MyType from a value */
-  export interface Make extends TypeLambda1 {
-    return: MyType<Arg0<this>>;
+  export interface Make extends Nano.TypeLambda1 {
+    return: MyType<Nano.Arg0<this>>;
   }
 
   /** 
    * Get the type parameter from an instance of MyType. 
    * Passed along directly to Make. 
    */
-  export interface Get extends TypeLambda1 {
+  export interface Get extends Nano.TypeLambda1 {
     return: Arg0<this> extends MyType<infer A> ? [A] : never;
   }
 
@@ -518,14 +517,13 @@ console.log(result); // File content length
 
 ```typescript
 import * as Nano from "@typed/nano";
-import type { TArg, Arg0, Call1W } from "hkt-core";
 
 // Generic effect that works with any Nano type
 class Split extends Nano.EffectG<["Y", "R"]>()("Split") {
   declare signature: (
-    nano: Nano.Nano<TArg<this, "Y">, TArg<this, "R">>
-  ) => Call1W<Split, typeof nano>;
-  declare return: Nano.Nano.AddYield<Arg0<this>, Split>;
+    nano: Nano.Nano<Nano.TArg<this, "Y">, Nano.TArg<this, "R">>
+  ) => Nano.Call1W<Split, typeof nano>;
+  declare return: Nano.AddYield<Nano.Arg0<this>, Split>;
 }
 
 // Use with proper type inference
