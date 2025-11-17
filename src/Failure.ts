@@ -32,7 +32,7 @@ export const catchFailure = <Y, R, N2 extends Nano.Any>(
   nano: Nano.Nano<Y, R>,
   onFailure: (error: Failure.Extract<Y>) => N2,
 ): Nano.Nano<Failure.Exclude<Y> | Nano.Yield<N2>, R | Nano.Return<N2>> =>
-  Nano.flatMapInput(nano, (y) => {
+  Nano.flatMapYield(nano, (y) => {
     if (Failure.is(y)) return onFailure(y);
     return Nano.yield(y);
   });
