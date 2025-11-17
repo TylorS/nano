@@ -11,14 +11,14 @@ export class Failure<E> extends Effect("Failure")<[error: E]> {
 export declare namespace Failure {
   export interface Unify extends Unify.Unification {
     make: Make;
-    get: Get;
+    getArgs: GetAgs;
   }
 
   export interface Make extends TypeLambda1 {
     return: Failure<Arg0<this>>;
   }
 
-  export interface Get extends TypeLambda1 {
+  export interface GetAgs extends TypeLambda1 {
     return: Arg0<this> extends Failure<infer E> ? [E] : never;
   }
 
@@ -30,15 +30,15 @@ export declare namespace Failure {
 export const failure = <E>(error: E): Failure<E> => new Failure(error);
 
 export const catchFailure: {
+  <Y, N2 extends Nano.Any>(
+    onFailure: (error: Failure.Extract<Y>) => N2,
+  ): <R>(
+    nano: Nano.Nano<Y, R>,
+  ) => Nano.Nano<Failure.Exclude<Y> | Nano.Yield<N2>, R | Nano.Return<N2>>;
   <Y, R, N2 extends Nano.Any>(
     nano: Nano.Nano<Y, R>,
     onFailure: (error: Failure.Extract<Y>) => N2,
   ): Nano.Nano<Failure.Exclude<Y> | Nano.Yield<N2>, R | Nano.Return<N2>>;
-  <Y, R, N2 extends Nano.Any>(
-    onFailure: (error: Failure.Extract<Y>) => N2,
-  ): (
-    nano: Nano.Nano<Y, R>,
-  ) => Nano.Nano<Failure.Exclude<Y> | Nano.Yield<N2>, R | Nano.Return<N2>>;
 } = function (): any {
   if (arguments.length === 1) {
     return (nano: Nano.Nano<any, any>) => catchFailure_(nano, arguments[0]);

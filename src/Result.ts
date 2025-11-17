@@ -11,14 +11,14 @@ export class Success<A> extends Effect("Success")<[value: A]> {
 export namespace Success {
   export interface Unify extends Unify.Unification {
     make: Make;
-    get: Get;
+    getArgs: GetArgs;
   }
 
   export interface Make extends TypeLambda1 {
     return: Success<Arg0<this>>;
   }
 
-  export interface Get extends TypeLambda1 {
+  export interface GetArgs extends TypeLambda1 {
     return: Arg0<this> extends Success<infer A> ? [A] : never;
   }
 

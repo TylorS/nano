@@ -18,7 +18,7 @@ export declare namespace Unify {
 
   export type Args<U, T> = [Extract<U, T>] extends [never]
     ? never
-    : Call1<GetUnification<T>["get"], Extract<U, T>>;
+    : Call1<GetUnification<T>["getArgs"], Extract<U, T>>;
 
   export type Arg0<U, T> =
     Args<U, T> extends readonly [infer A, ...infer _] ? A : never;
@@ -72,14 +72,14 @@ export type GetUnification<A> = A extends {
       : never;
 
 export type Unification = {
-  readonly get: TypeLambda1;
+  readonly getArgs: TypeLambda1;
   readonly make: TypeLambda;
 };
 
 export interface Extract_<U extends Unification> extends TypeLambda1 {
   readonly return: ApplyW<
     U["make"],
-    Call1<U["get"], globalThis.Extract<Arg0<this>, ApplyW<U["make"], any[]>>>
+    Call1<U["getArgs"], globalThis.Extract<Arg0<this>, ApplyW<U["make"], any[]>>>
   >;
 }
 
