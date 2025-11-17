@@ -1,6 +1,6 @@
 {
   "name": "@typed/nano",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "description": "Lightweight iterator and open variant types for TypeScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
