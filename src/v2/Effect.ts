@@ -26,6 +26,25 @@ export interface EffectConstructor<Tag extends string> {
   ): Effect<Tag, Args>;
 }
 
+/**
+ * Construct effects which implement the Nano interface and utilize hkt-core for return type inference.
+ * 
+ * Ultimately, this is identical to creating TypeLambdas in hkt-core, using the `declare` keyword to 
+ * create phantom types upon the class instance. 
+ * 
+ * The runtime value is just a Nano which yields itself and utilizing the `return` property to determine the 
+ * 
+ * @example
+ * ```typescript
+ * class Log extends Effect("Log")<unknown[]> {
+ *    declare return: void;
+ *    // alternatively,
+ *    // return!: void;
+ * }
+ *
+ * const log = (...args: readonly unknown[]) => new Log(args);
+ * ```
+ */
 export const Effect = <Tag extends string>(tag: Tag): EffectConstructor<Tag> =>
   class Effect<Args extends readonly unknown[]>
     extends PipeableClass
@@ -114,6 +133,20 @@ type ToTypeParameters<Params extends Array<TypeParamDeclaration>> = {
   [K in keyof Params]: ToTypeParam<Params[K]>;
 };
 
+/**
+ * For creating generic effects which utilize hkt-core for return type inference. This is identical to creating Generic TypeLambdas in hkt-core, 
+ * using the `declare` keyword to  create phantom types upon the class instance.
+ * 
+ * The runtime value is identical to that of Effect(tag).
+ * 
+ * @example
+ * ```typescript
+ * class Split extends EffectG<["Y", "R"]>()("Split") {
+ *   declare signature: (nano: Nano.Nano<TArg<this, "Y">, TArg<this, "R">>) => Call1W<Split, typeof nano>;
+ *   declare return: Nano.Nano.AddYield<Arg0<this>, Split>;
+ * }
+ * ```
+ */
 export const EffectG =
   <G extends Array<TypeParamDeclaration>>() =>
   <Tag extends string>(
