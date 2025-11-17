@@ -14,6 +14,8 @@ export type Unify<A, F extends Unification = never> = [
   : never;
 
 export declare namespace Unify {
+  // Intentionally internal to avoid conflicting with the hkt-core types of the same names.
+
   export type Args<U, T> = [Extract<U, T>] extends [never]
     ? never
     : Call1<GetUnification<T>["get"], Extract<U, T>>;
