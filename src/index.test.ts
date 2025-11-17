@@ -32,7 +32,7 @@ describe("Nano", () => {
     const fail = <E>(error: E): Effect<never, E> => Nano.failure(error);
 
     const make = Nano.make as <Y extends Yield<any, any>, R>(
-      f: () => Generator<Y, R>,
+      f: () => Iterator<Y, R>,
     ) => Effect<
       R,
       Nano.Result.FailureFromYield<Y>,
@@ -83,7 +83,7 @@ describe("Nano", () => {
     });
 
     it("should handle refs effects", () => {
-      class Counter extends Nano.ref(() => 0) {}
+      class Counter extends Nano.ref("Counter", () => 0) {}
 
       const program: Effect<number> = make(function* () {
         yield* Counter.set(10);
@@ -100,7 +100,7 @@ describe("Nano", () => {
         "Logger",
       ) {}
 
-      class Counter extends Nano.ref(() => 0) {}
+      class Counter extends Nano.ref("Counter", () => 0) {}
 
       const program = make(function* () {
         yield* Counter.set(5);
@@ -161,7 +161,7 @@ describe("Nano", () => {
     });
 
     it("should handle refs with local scoping", () => {
-      class Counter extends Nano.ref(() => 0) {}
+      class Counter extends Nano.ref("Counter", () => 0) {}
 
       const program = make(function* () {
         yield* Counter.set(10);
@@ -206,7 +206,7 @@ describe("Nano", () => {
         { query: (_sql: string) => Promise<number> }
       >("Database") {}
 
-      class QueryCount extends Nano.ref(() => 0) {}
+      class QueryCount extends Nano.ref("QueryCount", () => 0) {}
 
       const program = make(function* () {
         yield* QueryCount.set(0);

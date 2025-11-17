@@ -2,8 +2,13 @@ import * as Nano from "./Nano.js";
 import { variant } from "./Variant.js";
 import * as Iterator from "./Iterator.js";
 import * as Unify from "./Unify.js";
-import type { Arg0, TypeLambda1 } from "hkt-core";
+import type { Arg0, Call1, TypeLambda1 } from "hkt-core";
 
+/**
+ * Emit is a variant for representing a value that has been emitted.
+ * It essentially implements an event of a pull-based stream by yielding
+ * to its observer cooperatively.
+ */
 export class Emit<A>
   extends variant("Emit")
   implements Nano.Nano<Emit<A>, unknown>
@@ -33,7 +38,7 @@ export declare namespace Emit {
 
   export type ExcludeAll<Y> = globalThis.Exclude<Y, Emit<any>>;
 
-  export type FromYield<Y> = Unify.Call<Unify, Y>;
+  export type FromYield<Y> = Call1<Get, Unify.Call<Unify, Y>>[0];
 }
 
 export const emit = <A>(value: A): Emit<A> => new Emit(value);
@@ -71,3 +76,65 @@ const observe_ = <Y, A, R, Y2, R2>(
     }
     return Nano.yield(y);
   });
+
+function map_<Y, A, R, B>(
+  stream: Nano.Nano<Y | Emit<A>, R>,
+  f: (value: A) => B,
+): Nano.Nano<Y | Emit<B>, R> {
+  return Nano.mapInput(stream, (y) => {
+    if (isEmit(y)) {
+      return emit(f(y.value));
+    }
+    return y;
+  });
+}
+
+export const mapEmit: {
+  <Y, B>(
+    f: (value: Emit.FromYield<Y>) => B,
+  ): <R>(stream: Nano.Nano<Y, R>) => Nano.Nano<Emit.ExcludeAll<Y> | Emit<B>, R>;
+  <Y, A, R, B>(
+    stream: Nano.Nano<Y | Emit<A>, R>,
+    f: (value: A) => B,
+  ): Nano.Nano<Y | Emit<B>, R>;
+} = (...args: any): any => {
+  if (args.length === 1) {
+    return (stream: any) => map_(stream, args[0]);
+  }
+  return map_(args[0], args[1]);
+};
+
+export const filterEmit: {
+  <Y, B extends Emit.FromYield<Y>>(
+    predicate: (value: Emit.FromYield<Y>) => value is B,
+  ): <R>(stream: Nano.Nano<Y, R>) => Nano.Nano<Emit.ExcludeAll<Y> | Emit<B>, R>;
+  <Y>(
+    predicate: (value: Emit.FromYield<Y>) => boolean,
+  ): <R>(stream: Nano.Nano<Y, R>) => Nano.Nano<Y, R>;
+  
+  <Y, R, B extends Emit.FromYield<Y>>(
+    stream: Nano.Nano<Y, R>,
+    predicate: (value: Emit.FromYield<Y>) => value is B,
+  ): Nano.Nano<Emit.ExcludeAll<Y> | Emit<B>, R>;
+  <Y, A, R>(
+    stream: Nano.Nano<Y, R>,
+    predicate: (value: A) => boolean,
+  ): Nano.Nano<Y, R>;
+} = (...args: any): any => {
+  if (args.length === 1) {
+    return (stream: any) => filter_(stream, args[0]);
+  }
+  return filter_(args[0], args[1]);
+};
+
+function filter_<Y, A, R>(
+  stream: Nano.Nano<Y | Emit<A>, R>,
+  predicate: (value: A) => boolean,
+): Nano.Nano<Y | Emit<A>, R> {
+  return Nano.flatMapInput(stream, (y) => {
+    if (isEmit(y)) {
+      return predicate(y.value) ? Nano.yield(y) : Nano.void;
+    }
+    return Nano.yield(y);
+  });
+}

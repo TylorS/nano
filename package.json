@@ -30,6 +30,7 @@
     "vitest": "^4.0.8"
   },
   "dependencies": {
-    "hkt-core": "^1.3.0"
+    "hkt-core": "^1.3.0",
+    "ts-toolbelt": "^9.6.0"
   }
 }

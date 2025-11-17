@@ -2,6 +2,7 @@ export * from "./Emit.js";
 export * from "./Env.js";
 export * from "./Error.js";
 export * from "./Nano.js";
+export * from "./Option.js"
 export * from "./Refs.js";
 export * from "./Result.js";
 export * from "./Unify.js";
