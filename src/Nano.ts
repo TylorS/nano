@@ -109,21 +109,21 @@ const map_ = <Y1, R1, R2>(
   f: (value: R1) => R2,
 ): Nano<Y1, R2> => fromIterator(() => Iterator.map(Iterator.get(nano), f));
 
-export const mapInput: {
+export const mapYield: {
   <Y1, Y2>(f: (value: Y1) => Y2): <R1>(nano: Nano<Y1, R1>) => Nano<Y2, R1>;
   <Y1, R1, Y2>(nano: Nano<Y1, R1>, f: (value: Y1) => Y2): Nano<Y2, R1>;
 } = (...args: any[]): any => {
   if (args.length === 1) {
-    return (nano: Nano<any, any>) => mapInput_(nano, args[0]);
+    return (nano: Nano<any, any>) => mapYield_(nano, args[0]);
   } else {
-    return mapInput_(args[0], args[1]);
+    return mapYield_(args[0], args[1]);
   }
 };
 
-const mapInput_ = <Y1, R1, Y2>(
+const mapYield_ = <Y1, R1, Y2>(
   nano: Nano<Y1, R1>,
   f: (value: Y1) => Y2,
-): Nano<Y2, R1> => fromIterator(() => Iterator.mapInput(Iterator.get(nano), f));
+): Nano<Y2, R1> => fromIterator(() => Iterator.mapYield(Iterator.get(nano), f));
 
 export const flatMap: {
   <R1, Y2, R2>(
@@ -153,7 +153,7 @@ export const flatten = <Y, Y2, R>(
   nano: Nano<Y, Nano<Y2, R>>,
 ): Nano<Y | Y2, R> => flatMap(nano, identity);
 
-export const flatMapInput: {
+export const flatMapYield: {
   <Y1, N2 extends Nano<any, any>>(
     f: (value: Y1) => N2,
   ): <R1>(nano: Nano<Y1, R1>) => Nano<Nano.Yield<N2>, R1>;
@@ -163,18 +163,18 @@ export const flatMapInput: {
   ): Nano<Nano.Yield<N2>, R1>;
 } = (...args: any[]): any => {
   if (args.length === 1) {
-    return (nano: Nano<any, any>) => flatMapInput_(nano, args[0]);
+    return (nano: Nano<any, any>) => flatMapYield_(nano, args[0]);
   } else {
-    return flatMapInput_(args[0], args[1]);
+    return flatMapYield_(args[0], args[1]);
   }
 };
 
-const flatMapInput_ = <Y1, R1, Y2, R2>(
+const flatMapYield_ = <Y1, R1, Y2, R2>(
   nano: Nano<Y1, R1>,
   f: (value: Y1) => Nano<Y2, R2>,
 ): Nano<Y2, R1> =>
   fromIterator(() =>
-    Iterator.flatMapInput(Iterator.get(nano), flow2(f, Iterator.get)),
+    Iterator.flatMapYield(Iterator.get(nano), flow2(f, Iterator.get)),
   );
 
 export const mapBoth: {

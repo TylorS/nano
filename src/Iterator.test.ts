@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   flatMap,
-  flatMapInput,
+  flatMapYield,
   map,
   mapBoth,
-  mapInput,
+  mapYield,
   once,
   success,
 } from "./Iterator.js";
@@ -112,7 +112,7 @@ describe("map", () => {
 describe("mapInput", () => {
   it("should map yield values", () => {
     const source = once<number>()(1);
-    const mapped = mapInput(source, (x: number) => x * 2);
+    const mapped = mapYield(source, (x: number) => x * 2);
 
     const result1 = mapped.next();
     expect(result1.done).toBe(false);
@@ -125,7 +125,7 @@ describe("mapInput", () => {
 
   it("should preserve return values", () => {
     const source = once<number>()(5);
-    const mapped = mapInput(source, (x: number) => x.toString());
+    const mapped = mapYield(source, (x: number) => x.toString());
 
     mapped.next();
     const result = mapped.next(42);
@@ -135,8 +135,8 @@ describe("mapInput", () => {
 
   it("should compose with other mapInput iterators", () => {
     const source = once<number>()(1);
-    const mapped1 = mapInput(source, (x: number) => x * 2);
-    const mapped2 = mapInput(mapped1, (x: number) => x + 1);
+    const mapped1 = mapYield(source, (x: number) => x * 2);
+    const mapped2 = mapYield(mapped1, (x: number) => x + 1);
 
     const result = mapped2.next();
     expect(result.done).toBe(false);
@@ -155,7 +155,7 @@ describe("mapInput", () => {
       },
     };
 
-    const mapped = mapInput(source, (x: number) => x * 2);
+    const mapped = mapYield(source, (x: number) => x * 2);
     if (!mapped.throw) throw new Error("throw should exist");
     const result = mapped.throw(new Error("test"));
     expect(thrown).toBe(true);
@@ -175,7 +175,7 @@ describe("mapInput", () => {
       },
     };
 
-    const mapped = mapInput(source, (x: number) => x * 2);
+    const mapped = mapYield(source, (x: number) => x * 2);
     if (!mapped.return) throw new Error("return should exist");
     const result = mapped.return(100);
     expect(returned).toBe(true);
@@ -297,7 +297,7 @@ describe("flatMap", () => {
 describe("flatMapInput", () => {
   it("should flat map yield values to a new iterator", () => {
     const source = once<number>()(1);
-    const flatMapped = flatMapInput(source, (x: number) => success(x * 2));
+    const flatMapped = flatMapYield(source, (x: number) => success(x * 2));
 
     const result1 = flatMapped.next();
     expect(result1.done).toBe(true);
@@ -306,7 +306,7 @@ describe("flatMapInput", () => {
 
   it("should yield from the new iterator", () => {
     const source = once<number>()(1);
-    const flatMapped = flatMapInput(source, (x: number) =>
+    const flatMapped = flatMapYield(source, (x: number) =>
       once<number>()(x * 2),
     );
 
@@ -327,7 +327,7 @@ describe("flatMapInput", () => {
     }
 
     const source = once<number>()(10);
-    const flatMapped = flatMapInput(source, (x: number) => counter(x));
+    const flatMapped = flatMapYield(source, (x: number) => counter(x));
 
     const result1 = flatMapped.next();
     expect(result1.done).toBe(false);
@@ -346,8 +346,8 @@ describe("flatMapInput", () => {
 
   it("should compose with mapInput iterators", () => {
     const source = once<number>()(1);
-    const mapped = mapInput(source, (x: number) => x * 2);
-    const flatMapped = flatMapInput(mapped, (x: number) =>
+    const mapped = mapYield(source, (x: number) => x * 2);
+    const flatMapped = flatMapYield(mapped, (x: number) =>
       once<number>()(x * 3),
     );
 
@@ -372,7 +372,7 @@ describe("flatMapInput", () => {
       },
     };
 
-    const flatMapped = flatMapInput(source, () => inner);
+    const flatMapped = flatMapYield(source, () => inner);
     flatMapped.next(); // Trigger inner iterator creation and get first yield
     if (!flatMapped.throw) throw new Error("throw should exist");
     const result = flatMapped.throw(new Error("test"));
@@ -393,7 +393,7 @@ describe("flatMapInput", () => {
       },
     };
 
-    const flatMapped = flatMapInput(source, () => once<number>()(1));
+    const flatMapped = flatMapYield(source, () => once<number>()(1));
     flatMapped.next();
     if (!flatMapped.return) throw new Error("return should exist");
     const result = flatMapped.return(100);
@@ -419,7 +419,7 @@ describe("flatMapInput", () => {
       return value * 2;
     }
 
-    const flatMapped = flatMapInput(source, (x: number) => singleYield(x));
+    const flatMapped = flatMapYield(source, (x: number) => singleYield(x));
     const result1 = flatMapped.next();
     expect(result1.done).toBe(false);
     expect(result1.value).toBe(10);
@@ -466,7 +466,7 @@ describe("mapBoth", () => {
 
   it("should compose with mapInput iterators", () => {
     const source = once<number>()(1);
-    const mapped1 = mapInput(source, (x: number) => x * 2);
+    const mapped1 = mapYield(source, (x: number) => x * 2);
     const mapped2 = mapBoth(
       mapped1,
       (x: number) => x * 3,

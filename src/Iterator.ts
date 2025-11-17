@@ -88,19 +88,19 @@ function isMapIterator<Y, R1>(
   return iterator.constructor === MapIterator;
 }
 
-export const mapInput = <Y1, R1, Y2>(
+export const mapYield = <Y1, R1, Y2>(
   iterator: Iterator<Y1, R1> | Iterator<Unify<Y1>, R1>,
   f: (value: Y1) => Y2,
-): Iterator<Y2, R1> => new MapInputIterator(iterator as Iterator<Y1, R1>, f);
+): Iterator<Y2, R1> => new MapYieldIterator(iterator as Iterator<Y1, R1>, f);
 
-class MapInputIterator<Y1, R1, Y2> implements Iterator<Y2, R1> {
+class MapYieldIterator<Y1, R1, Y2> implements Iterator<Y2, R1> {
   static make<Y1, R1, Y2>(
     iterator: Iterator<Y1, R1>,
     f: (value: Y1) => Y2,
   ): Iterator<Y2, R1> {
-    if (isMapInputIterator(iterator))
-      return new MapInputIterator(iterator.iterator, flow2(iterator.f, f));
-    return new MapInputIterator(iterator, f);
+    if (isMapYieldIterator(iterator))
+      return new MapYieldIterator(iterator.iterator, flow2(iterator.f, f));
+    return new MapYieldIterator(iterator, f);
   }
 
   constructor(
@@ -129,10 +129,10 @@ class MapInputIterator<Y1, R1, Y2> implements Iterator<Y2, R1> {
   }
 }
 
-function isMapInputIterator<Y1, R1>(
+function isMapYieldIterator<Y1, R1>(
   iterator: Iterator<Y1, R1>,
-): iterator is MapInputIterator<unknown, R1, Y1> {
-  return iterator.constructor === MapInputIterator;
+): iterator is MapYieldIterator<unknown, R1, Y1> {
+  return iterator.constructor === MapYieldIterator;
 }
 
 export const flatMap = <Y, R1, Y2, R2>(
@@ -183,20 +183,20 @@ class FlatMapIterator<Y, R1, Y2, R2> implements Iterator<Y | Y2, R2> {
   }
 }
 
-export const flatMapInput = <Y1, R1, Y2, R2>(
+export const flatMapYield = <Y1, R1, Y2, R2>(
   iterator: Iterator<Y1, R1> | Iterator<Unify<Y1>, R1>,
   f: (value: Y1) => Iterator<Y2, R2>,
 ): Iterator<Y2, R1> =>
-  FlatMapInputIterator.make(iterator as Iterator<Y1, R1>, f);
+  FlatMapYieldIterator.make(iterator as Iterator<Y1, R1>, f);
 
-class FlatMapInputIterator<Y1, R1, Y2, R2> implements Iterator<Y2, R1> {
+class FlatMapYieldIterator<Y1, R1, Y2, R2> implements Iterator<Y2, R1> {
   static make<Y1, R1, Y2, R2>(
     iterator: Iterator<Y1, R1>,
     f: (value: Y1) => Iterator<Y2, R2>,
   ): Iterator<Y2, R1> {
-    if (isMapInputIterator(iterator))
-      return new FlatMapInputIterator(iterator.iterator, flow2(iterator.f, f));
-    return new FlatMapInputIterator(iterator, f);
+    if (isMapYieldIterator(iterator))
+      return new FlatMapYieldIterator(iterator.iterator, flow2(iterator.f, f));
+    return new FlatMapYieldIterator(iterator, f);
   }
 
   private _innerIterator: Iterator<Y2, R2> | null = null;
@@ -264,7 +264,7 @@ class MapBothIterator<Y1, R1, Y2, R2> implements Iterator<Y2, R2> {
         onYield,
         flow2(iterator.f, onReturn),
       );
-    if (isMapInputIterator(iterator))
+    if (isMapYieldIterator(iterator))
       return MapBothIterator.make(
         iterator.iterator,
         flow2(iterator.f, onYield),

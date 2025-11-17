@@ -76,7 +76,7 @@ const program = Nano.of(5).pipe(
 const result = Nano.run(program); // 10
 ```
 
-#### `Nano.mapInput`
+#### `Nano.mapYield`
 
 Transform the yield values of a Nano.
 
@@ -85,7 +85,7 @@ const program = Nano.make(function* () {
   const value = yield* someEffect;
   return value;
 }).pipe(
-  Nano.mapInput((effect) => transformEffect(effect))
+  Nano.mapYield((effect) => transformEffect(effect))
 );
 ```
 
@@ -100,13 +100,13 @@ const program = Nano.of(5).pipe(
 const result = Nano.run(program); // 10
 ```
 
-#### `Nano.flatMapInput`
+#### `Nano.flatMapYield`
 
 Chain Nanos by transforming yield values into other Nanos.
 
 ```typescript
 const program = nano.pipe(
-  Nano.flatMapInput((effect) => {
+  Nano.flatMapYield((effect) => {
     if (isSomething(effect)) {
       return handleEffect(effect);
     }
@@ -416,12 +416,12 @@ Map the return value of an iterator.
 const mapped = Nano.Iterator.map(iter, (x) => x * 2);
 ```
 
-#### `Iterator.mapInput`
+#### `Iterator.mapYield`
 
 Map the yield values of an iterator.
 
 ```typescript
-const mapped = Nano.Iterator.mapInput(iter, (y) => transform(y));
+const mapped = Nano.Iterator.mapYield(iter, (y) => transform(y));
 ```
 
 #### `Iterator.flatMap`
@@ -432,12 +432,12 @@ FlatMap the return value of an iterator.
 const flatMapped = Nano.Iterator.flatMap(iter, (x) => otherIter(x));
 ```
 
-#### `Iterator.flatMapInput`
+#### `Iterator.flatMapYield`
 
 FlatMap the yield values of an iterator.
 
 ```typescript
-const flatMapped = Nano.Iterator.flatMapInput(iter, (y) => otherIter(y));
+const flatMapped = Nano.Iterator.flatMapYield(iter, (y) => otherIter(y));
 ```
 
 #### `Iterator.mapBoth`
@@ -501,7 +501,7 @@ type MyYield = Log | ReadFile | WriteFile;
 
 // Implement an interpreter
 const runProgram = (program: Nano.Nano<MyYield, number>) =>
-  Nano.flatMapInput(program, (effect) => {
+  Nano.flatMapYield(program, (effect) => {
     if (Log.is(effect)) return Nano.sync(() => console.log(...effect.args));
     if (WriteFile.is(effect)) return Nano.sync(() => fs.writeFileSync(...effect.args))
     if (ReadFile.is(effect)) return Nano.sync(() => fs.readFileSync(...effect.args, 'utf-8'))
