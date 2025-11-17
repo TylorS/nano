@@ -526,9 +526,9 @@ class Split extends Nano.EffectG<["Y", "R"]>()("Split") {
   declare return: Nano.AddYield<Nano.Arg0<this>, Split>;
 }
 
-// Use with proper type inference
+// Use with proper type inference of Nano.Nano<Split, number>
 const program = Nano.make(function* () {
   const result = yield* Split.make(Nano.of(42));
-  return result;
+  return yield* result;
 });
 ```
