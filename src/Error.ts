@@ -1,18 +1,22 @@
 import * as Iterator from "./Iterator.js";
 import type { Nano } from "./Nano.js";
-import { Failure } from "./Result.js";
+import { Failure } from "./Failure.js";
 import { pipeArguments } from "./Function.js";
-import { isVariant } from "./Variant.js";
 
 export type ErrorConstructor<Tag extends string, Id> = {
   readonly _tag: Tag;
   new (
     ...args: ConstructorParameters<typeof Error>
-  ): Error & { readonly _tag: Tag } & Nano<Failure<Id>, never>;
+  ): Error & Nano<Failure<Id>, never> & { readonly _tag: Tag };
 };
 
 /**
  * Helper for creating custom errors which are also yieldable failures.
+ * 
+ * @example
+ * ```typescript
+ * export class MyError extends Nano.error<MyError>()("MyError") {}
+ * ```
  */
 export const error =
   <Id>() =>
@@ -38,10 +42,6 @@ export const error =
       static override [Symbol.hasInstance](
         instance: unknown,
       ): instance is Error & Nano<Failure<Id>, never> {
-        return (
-          instance instanceof Error &&
-          isVariant(instance) &&
-          instance._tag === tag
-        );
+        return instance instanceof Error && (instance as any)._tag === tag;
       }
     };

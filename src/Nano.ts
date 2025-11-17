@@ -1,6 +1,6 @@
 import * as Iterator from "./Iterator.js";
 import * as Unify from "./Unify.js";
-import { flow2, pipeArguments, type Pipeable } from "./Function.js";
+import { flow2, identity, pipeArguments, type Pipeable } from "./Function.js";
 
 /**
  * Nano is just a wrapper around an iterator that provides a pipe method for convenience.
@@ -27,6 +27,9 @@ export declare namespace Nano {
         ]
       ? R
       : never;
+
+  export type AddYield<N extends Nano<any, any>, Y2> =
+    N extends Nano<infer Y, infer R> ? Nano<Y | Y2, R> : never;
 }
 
 /**
@@ -64,7 +67,7 @@ export const make: {
     f: (this: T) => Iterator<Y, A>,
   ): Nano<Unify.Unify<Y>, Unify.Unify<A>>;
   <Y, A>(f: () => Iterator<Y, A>): Nano<Unify.Unify<Y>, Unify.Unify<A>>;
-} = fromIterator;
+} = fromIterator as any;
 
 export const of = <R>(value: R): Nano<never, R> =>
   fromIterator(() => Iterator.success(value));
@@ -140,6 +143,10 @@ const flatMap_ = <Y1, R1, Y2, R2>(
   fromIterator(() =>
     Iterator.flatMap(Iterator.get(nano), flow2(f, Iterator.get)),
   );
+
+export const flatten = <Y, Y2, R>(
+  nano: Nano<Y, Nano<Y2, R>>,
+): Nano<Y | Y2, R> => flatMap(nano, identity);
 
 export const flatMapInput: {
   <Y1, N2 extends Nano<any, any>>(

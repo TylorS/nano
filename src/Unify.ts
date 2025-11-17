@@ -5,9 +5,18 @@ export const unifySymbol = Symbol.for("nano/unify");
 export type unifySymbol = typeof unifySymbol;
 
 export type Unify<A, F extends Lambdas = never> = [
-  ([F] extends [never] ? Call1<Extract, A> : Call<F, A>) | FilterOut<A>,
-] extends [infer U]
-  ? [U][U extends any ? 0 : never]
+  | ([F] extends [never]
+      ? Call1<PerformUnification, FilterIn<A>>
+      : Call<F, FilterIn<A>>)
+  | FilterOut<A>,
+] extends [infer R]
+  ? [R][R extends any ? 0 : never]
+  : never;
+
+type FilterIn<A> = A extends {
+  readonly [unifySymbol]?: infer _ extends Lambdas;
+}
+  ? A
   : never;
 
 type FilterOut<A> = A extends {
@@ -16,30 +25,57 @@ type FilterOut<A> = A extends {
   ? never
   : A;
 
-export interface Extract extends TypeLambda1 {
-  return: Arg0<this> extends Unifiable<infer U> ? Call<U, Arg0<this>> : never;
+interface PerformUnification extends TypeLambda1 {
+  return: Call<GetUnifiableLambdas<Arg0<this>>, Arg0<this>>;
 }
 
-export type Unifiable<L extends Lambdas> = { readonly [unifySymbol]?: L };
+export type GetUnifiableLambdas<A> = A extends {
+  readonly [unifySymbol]?: infer L extends Lambdas;
+}
+  ? L
+  : A extends new (...args: any) => {
+        readonly [unifySymbol]?: infer L extends Lambdas;
+      }
+    ? L
+    : never;
 
 export type Lambdas = {
   readonly get: TypeLambda1;
   readonly make: TypeLambda;
 };
 
-export interface GetValue<U extends Lambdas> extends TypeLambda1 {
-  readonly return: Call1<
-    U["get"],
-    globalThis.Extract<Arg0<this>, ApplyW<U["make"], any[]>>
-  > extends infer R
-    ? [R] extends [never]
-      ? never
-      : ApplyW<U["make"], R>
-    : never;
+interface GetValue<U extends Lambdas> extends TypeLambda1 {
+  readonly return: ApplyW<
+    U["make"],
+    Call1<U["get"], globalThis.Extract<Arg0<this>, ApplyW<U["make"], any[]>>>
+  >;
 }
 
+type TryGetLambdas<U> = U extends Lambdas
+  ? U
+  : U extends GetUnifiableLambdas<infer U2 extends Lambdas>
+    ? U2
+    : never;
+
+export interface Extract_<U> extends TypeLambda1 {
+  readonly return: Call<TryGetLambdas<U>, Arg0<this>>;
+}
+
+export type Extract<U, Y> = Call1<Extract_<U>, Y>;
+
+export interface Exclude_<U> extends TypeLambda1 {
+  readonly return: globalThis.Exclude<
+    Arg0<this>,
+    Call<TryGetLambdas<U>, Arg0<this>>
+  >;
+}
+
+export type Exclude<U, Y> = Call1<Exclude_<U>, Y>;
+
 export type Call<U extends Lambdas, Arg> = U extends infer U2 extends Lambdas
-  ? Call1<GetValue<U2>, Arg>
+  ? [Call1<GetValue<U2>, Arg>] extends [infer R]
+    ? [R][R extends any ? 0 : never]
+    : never
   : never;
 
 export const unify: {
