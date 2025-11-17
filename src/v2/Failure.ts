@@ -1,11 +1,11 @@
-import type { Arg0, Call1, TypeLambda1 } from "hkt-core";
+import type { Arg0, TypeLambda1 } from "hkt-core";
 import { Effect } from "./Effect.js";
 import * as Nano from "./Nano.js";
 import * as Unify from "./Unify.js";
 
 export class Failure<E> extends Effect("Failure")<[error: E]> {
   declare return: never;
-  [Unify.unifySymbol]?: Failure.Unify;
+  declare [Unify.unifySymbol]: Failure.Unify;
 }
 
 export declare namespace Failure {
@@ -22,8 +22,8 @@ export declare namespace Failure {
     return: Arg0<this> extends Failure<infer E> ? [E] : never;
   }
 
-  export type Extract<Y> = Call1<Unify.Extract<Unify>, Y>
-  export type Exclude<Y> = Call1<Unify.Exclude<Unify>, Y>
+  export type Extract<Y> = Unify.Extract<Unify, Y>;
+  export type Exclude<Y> = Unify.Exclude<Unify, Y>;
 }
 
 export const failure = <E>(error: E): Failure<E> => new Failure(error);

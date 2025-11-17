@@ -57,16 +57,20 @@ type TryGetLambdas<U> = U extends Lambdas
     ? U2
     : never;
 
-export interface Extract<U> extends TypeLambda1 {
+export interface Extract_<U> extends TypeLambda1 {
   readonly return: Call<TryGetLambdas<U>, Arg0<this>>;
 }
 
-export interface Exclude<U> extends TypeLambda1 {
+export type Extract<U, Y> = Call1<Extract_<U>, Y>;
+
+export interface Exclude_<U> extends TypeLambda1 {
   readonly return: globalThis.Exclude<
     Arg0<this>,
     Call<TryGetLambdas<U>, Arg0<this>>
   >;
 }
+
+export type Exclude<U, Y> = Call1<Exclude_<U>, Y>;
 
 export type Call<U extends Lambdas, Arg> = U extends infer U2 extends Lambdas
   ? [Call1<GetValue<U2>, Arg>] extends [infer R]
