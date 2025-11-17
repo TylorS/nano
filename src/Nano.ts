@@ -28,9 +28,14 @@ export declare namespace Nano {
       ? R
       : never;
 
-  export type AddYield<N extends Nano<any, any>, Y2> =
+  export type AddYield<N extends Any, Y2> =
     N extends Nano<infer Y, infer R> ? Nano<Y | Y2, R> : never;
 }
+
+export type Any = Nano.Any;
+export type Yield<T> = Nano.Yield<T>;
+export type Return<T> = Nano.Return<T>;
+export type AddYield<N extends Any, Y2> = Nano.AddYield<N, Y2>;
 
 /**
  * Create a Nano from an generator function or iterator

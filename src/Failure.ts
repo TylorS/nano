@@ -28,13 +28,10 @@ export declare namespace Failure {
 
 export const failure = <E>(error: E): Failure<E> => new Failure(error);
 
-export const catchFailure = <Y, R, N2 extends Nano.Nano.Any>(
+export const catchFailure = <Y, R, N2 extends Nano.Any>(
   nano: Nano.Nano<Y, R>,
   onFailure: (error: Failure.Extract<Y>) => N2,
-): Nano.Nano<
-  Failure.Exclude<Y> | Nano.Nano.Yield<N2>,
-  R | Nano.Nano.Return<N2>
-> =>
+): Nano.Nano<Failure.Exclude<Y> | Nano.Yield<N2>, R | Nano.Return<N2>> =>
   Nano.flatMapInput(nano, (y) => {
     if (Failure.is(y)) return onFailure(y);
     return Nano.yield(y);

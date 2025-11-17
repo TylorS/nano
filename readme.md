@@ -194,19 +194,21 @@ class Add<A extends number, B extends number> extends Effect("Add")<[a: A, b: B]
 For effects that need generic type parameters, use `EffectG`:
 
 ```typescript
-/** Define TypeLambdaG type parameters */
-class Split extends EffectG<["Y", "R"]>()("Split") {
-  /** Needed for hkt-core's TypeLambdaG implementation */
+/** Define the generic effect, specifying the type parameters */
+class Split extends Nano.EffectG<["Y", "R"]>()("Split") {
   declare signature: (
-    nano: Nano.Nano<TArg<this, "Y">, TArg<this, "R">>
-  ) => Call1W<Split, typeof nano>;
+    /* Define our parameters using TArg for generics */
+    ...args: [Nano.Nano<Nano.TArg<this, "Y">, Nano.TArg<this, "R">>]
+    /* Apply these args to the Split TypeLambda itself */
+  ) => Nano.ApplyW<Split, typeof args>;
 
-  /** Needed for hkt-core's TypeLambda implementation */
-  declare return: Nano.Nano.AddYield<Arg0<this>, Split>;
+  /** Construct the return type, by adding Split to the yields */
+  declare return: Nano.Nano.AddYield<Nano.Arg0<this>, Split>;
 }
 
-// Use the make method for proper type inference
-const result = Split.make(someNano);
+
+// Use the .make method for proper type inference
+const result: Nano.Nano<Split, number> = Nano.flatten(Split.make(Nano.of(42)));
 ```
 
 Generic effects use hkt-core's `TypeLambdaG` abstraction, allowing you to:

@@ -6,3 +6,4 @@ export * from "./Nano.js";
 export * from "./Unify.js";
 
 export * as Iterator from "./Iterator.js";
+export type * from "hkt-core";

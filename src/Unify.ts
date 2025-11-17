@@ -54,24 +54,24 @@ interface GetValue<U extends Unification> extends TypeLambda1 {
 }
 
 export interface Extract_<Union> extends TypeLambda1 {
-  readonly return: globalThis.Extract<Union, Any<Arg0<this>>>;
+  readonly return: globalThis.Extract<Union, AnyOf<Arg0<this>>>;
 }
 
-export type Extract<U, Y> = Call1<Extract_<U>, Any<Y>>;
+export type Extract<U, Y> = Call1<Extract_<U>, AnyOf<Y>>;
 
 export interface Exclude_<U> extends TypeLambda1 {
-  return: globalThis.Exclude<U, Any<Arg0<this>>>;
+  return: globalThis.Exclude<U, AnyOf<Arg0<this>>>;
 }
 
 export type Exclude<U, Y> = Call1<Exclude_<U>, Y>;
 
-export interface Any_<U> extends TypeLambda1 {
+export interface AnyOf_<U> extends TypeLambda1 {
   readonly return: ApplyW<GetUnification<U>["make"], any[]>;
 }
 
-export type Any<U> = [GetUnification<U>] extends [never]
+export type AnyOf<U> = [GetUnification<U>] extends [never]
   ? InstanceOf<U>
-  : Call1<Any_<U>, InstanceOf<U>>;
+  : Call1<AnyOf_<U>, InstanceOf<U>>;
 
 type InstanceOf<T> = T extends new (...args: infer __) => infer I ? I : T;
 
