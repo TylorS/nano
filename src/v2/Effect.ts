@@ -10,8 +10,9 @@ import { PipeableClass } from "../Function.js";
 import type { Pipeable } from "./Function.js";
 import * as Nano from "./Nano.js";
 import * as Iterator from "./Iterator.js";
+import type * as Unify from "./Unify.js";
 
-export interface Effect<Tag extends string, Args extends readonly unknown[]>
+export interface Effect<Tag extends string, Args extends unknown[]>
   extends TypeLambda,
     Pipeable {
   readonly _tag: Tag;
@@ -21,19 +22,27 @@ export interface Effect<Tag extends string, Args extends readonly unknown[]>
 
 export interface EffectConstructor<Tag extends string> {
   readonly _tag: Tag;
-  new <const Args extends readonly unknown[] = []>(
-    ...args: Args
-  ): Effect<Tag, Args>;
+
+  is<T extends { readonly _tag: string }, E>(
+    this: T,
+    effect: E,
+  ): effect is Extract<E, AnyOf<InstanceOf<T>>>;
+
+  new <const Args extends unknown[] = []>(...args: Args): Effect<Tag, Args>;
 }
+
+export type AnyOf<T> = [Unify.GetUnifiableLambdas<T>] extends [never]
+  ? InstanceOf<T>
+  : ApplyW<Unify.GetUnifiableLambdas<T>["make"], any[]>;
 
 /**
  * Construct effects which implement the Nano interface and utilize hkt-core for return type inference.
- * 
- * Ultimately, this is identical to creating TypeLambdas in hkt-core, using the `declare` keyword to 
- * create phantom types upon the class instance. 
- * 
- * The runtime value is just a Nano which yields itself and utilizing the `return` property to determine the 
- * 
+ *
+ * Ultimately, this is identical to creating TypeLambdas in hkt-core, using the `declare` keyword to
+ * create phantom types upon the class instance.
+ *
+ * The runtime value is just a Nano which yields itself and utilizing the `return` property to determine the
+ *
  * @example
  * ```typescript
  * class Log extends Effect("Log")<unknown[]> {
@@ -57,6 +66,12 @@ export const Effect = <Tag extends string>(tag: Tag): EffectConstructor<Tag> =>
       super();
       this.args = args;
     }
+    static is<T extends { readonly _tag: string }, E>(
+      this: T,
+      effect: E,
+    ): effect is any {
+      return isEffectOf.call(this, effect);
+    }
     static make(...args: readonly unknown[]) {
       return new this(...args);
     }
@@ -66,13 +81,22 @@ export const Effect = <Tag extends string>(tag: Tag): EffectConstructor<Tag> =>
     }
 
     [Symbol.hasInstance](value: any): value is this {
-      if (typeof value !== "object" || value === null) return false;
-      return value._tag === this._tag || this.constructor === value.constructor;
+      return isEffectOf.call(this as any, value);
     }
 
     readonly ["~hkt"]!: TypeLambda["~hkt"];
     readonly signature!: TypeLambda["signature"];
   };
+
+function isEffectOf<
+  T extends {
+    readonly _tag: string;
+  },
+  E,
+>(this: T, effect: E): effect is Extract<E, InstanceOf<T>> {
+  if (effect === undefined || effect === null) return false;
+  return (effect as any)._tag === this._tag;
+}
 
 type TypeParameterIdentifier = Capitalize<string>;
 type TypeParameter = [TypeParameterIdentifier, unknown];
@@ -134,11 +158,11 @@ type ToTypeParameters<Params extends Array<TypeParamDeclaration>> = {
 };
 
 /**
- * For creating generic effects which utilize hkt-core for return type inference. This is identical to creating Generic TypeLambdas in hkt-core, 
+ * For creating generic effects which utilize hkt-core for return type inference. This is identical to creating Generic TypeLambdas in hkt-core,
  * using the `declare` keyword to  create phantom types upon the class instance.
- * 
+ *
  * The runtime value is identical to that of Effect(tag).
- * 
+ *
  * @example
  * ```typescript
  * class Split extends EffectG<["Y", "R"]>()("Split") {

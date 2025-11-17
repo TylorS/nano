@@ -1,0 +1,41 @@
+import type { Arg0, Call1, TypeLambda1 } from "hkt-core";
+import { Effect } from "./Effect.js";
+import * as Nano from "./Nano.js";
+import * as Unify from "./Unify.js";
+
+export class Failure<E> extends Effect("Failure")<[error: E]> {
+  declare return: never;
+  [Unify.unifySymbol]?: Failure.Unify;
+}
+
+export declare namespace Failure {
+  export interface Unify extends Unify.Lambdas {
+    make: Make;
+    get: Get;
+  }
+
+  export interface Make extends TypeLambda1 {
+    return: Failure<Arg0<this>>;
+  }
+
+  export interface Get extends TypeLambda1 {
+    return: Arg0<this> extends Failure<infer E> ? [E] : never;
+  }
+
+  export type Extract<Y> = Call1<Unify.Extract<Unify>, Y>
+  export type Exclude<Y> = Call1<Unify.Exclude<Unify>, Y>
+}
+
+export const failure = <E>(error: E): Failure<E> => new Failure(error);
+
+export const catchFailure = <Y, R, N2 extends Nano.Nano.Any>(
+  nano: Nano.Nano<Y, R>,
+  onFailure: (error: Failure.Extract<Y>) => N2,
+): Nano.Nano<
+  Failure.Exclude<Y> | Nano.Nano.Yield<N2>,
+  R | Nano.Nano.Return<N2>
+> =>
+  Nano.flatMapInput(nano, (y) => {
+    if (Failure.is(y)) return onFailure(y);
+    return Nano.yield(y);
+  });
