@@ -354,7 +354,7 @@ class MyType<A> {
 
 declare namespace MyType {
   /** Implement the Unify protocol for MyType */
-  export interface Unify extends Nano.Lambdas {
+  export interface Unify extends Nano.Unification {
     make: Make;
     get: Get;
   }
