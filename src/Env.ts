@@ -1,6 +1,6 @@
 import type { Arg0, TypeLambda1 } from "hkt-core";
 import type { U } from "ts-toolbelt";
-import { Effect } from "./Effect.js";
+import { asNot, Effect } from "./Effect.js";
 import { pipeArguments } from "./Function.js";
 import * as Iterator from "./Iterator.js";
 import * as Nano from "./Nano.js";
@@ -192,14 +192,8 @@ const provideAll_ = <Y, R>(
   nano: Nano.Nano<Y, R>,
   env: Env<Get.Ids<Y>>,
 ): Nano.Nano<Get.Exclude<Y>, R> =>
-  Nano.fromIterator(() =>
-    Iterator.flatMapYield(Iterator.get(nano), (value) => {
-      if (Get.is(value)) {
-        return Iterator.success(env);
-      } else {
-        return Iterator.once()(value as Get.Exclude<Y>);
-      }
-    }),
+  Nano.flatMapYield(nano, (value) =>
+    Get.is(value) ? Nano.of(env) : Nano.yield(asNot(value, Get)),
   );
 
 export const provide: {
@@ -220,7 +214,7 @@ export const provide: {
 };
 
 const provide_ = <Y, R, R2>(nano: Nano.Nano<Y, R>, env: Env<R2>) =>
-  Nano.flatMap(get(), (existing) =>
+  Nano.flatMap(get<Exclude<Get.Ids<Y>, R2>>(), (existing) =>
     provideAll(nano, existing.extend(env) as Env<Get.Ids<Y>>),
   );
 
