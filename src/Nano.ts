@@ -20,13 +20,13 @@ export declare namespace Nano {
       ? Y
       : never;
 
-  export type Return<T> = [T] extends [never]
+  export type Return<T, Fallback = never> = [T] extends [never]
     ? never
     : [T] extends [
           { readonly [Symbol.iterator]: () => Iterator<infer _Y, infer R> },
         ]
       ? R
-      : never;
+      : Fallback;
 
   export type AddYield<N extends Any, Y2> =
     N extends Nano<infer Y, infer R> ? Nano<Y | Y2, R> : never;
@@ -205,7 +205,7 @@ const mapBoth_ = <Y1, R1, Y2, R2>(
 export const run = <R>(nano: Nano<never, R>): R =>
   Iterator.get(nano).next().value;
 
-const yield_ = <Y>(value: Y): Nano<Y, unknown> =>
-  fromIterator(() => Iterator.once<unknown>()(value));
+const yield_ = <Y>(value: Y): Nano<Y, Nano.Return<Y, unknown>> =>
+  fromIterator(() => Iterator.once<Nano.Return<Y, unknown>>()(value));
 
 export { yield_ as yield };

@@ -8,7 +8,7 @@ import type * as Unify from "./Unify.js";
  * An Effect represent a yieldable computation that accepts some amount of arguments
  * and utilizes hkt-core for return type inference.
  */
-export interface Effect<Tag extends string, Args extends unknown[]>
+export interface Effect<Tag extends string, Args extends any[] | []>
   extends TypeLambda,
     Pipeable {
   readonly _tag: Tag;
@@ -25,9 +25,9 @@ export interface EffectConstructor<Tag extends string> {
   is<T extends { readonly _tag: string }, E>(
     this: T,
     effect: E,
-  ): effect is Unify.Extract<InstanceOf<T>, E>;
+  ): effect is Unify.Extract<T, E>;
 
-  new <const Args extends unknown[] = []>(...args: Args): Effect<Tag, Args>;
+  new <const Args extends any[] | [] = []>(...args: Args): Effect<Tag, Args>;
 }
 
 /**
@@ -48,10 +48,7 @@ export interface EffectConstructor<Tag extends string> {
  * ```
  */
 export const Effect = <Tag extends string>(tag: Tag): EffectConstructor<Tag> =>
-  class Effect<Args extends readonly unknown[]>
-    extends PipeableClass
-    implements TypeLambda
-  {
+  class Effect<Args extends any[]> extends PipeableClass implements TypeLambda {
     static readonly _tag = tag;
     readonly _tag = tag;
     readonly args: Args;
@@ -62,10 +59,10 @@ export const Effect = <Tag extends string>(tag: Tag): EffectConstructor<Tag> =>
     static is<T extends { readonly _tag: string }, E>(
       this: T,
       effect: E,
-    ): effect is Unify.Extract<InstanceOf<T>, E> {
+    ): effect is Unify.Extract<T, E> {
       return isEffectOf.call(this, effect);
     }
-    static make(...args: readonly unknown[]) {
+    static make(...args: any[]) {
       return new this(...args);
     }
 
@@ -87,7 +84,7 @@ function isEffectOf<
     readonly _tag: string;
   },
   E,
->(this: T, effect: E): effect is Unify.Extract<InstanceOf<T>, E> {
+>(this: T, effect: E): effect is Unify.Extract<T, E> {
   if (effect === undefined || effect === null) return false;
   return (effect as any)._tag === this._tag;
 }
@@ -176,3 +173,8 @@ type ToTypeParameters<Params extends Array<TypeParamDeclaration>> = {
   [K in keyof Params]: ToTypeParam<Params[K]>;
 };
 //#endregion
+
+export const asNot = <T, U extends Array<{ readonly _tag: string }>>(
+  value: T,
+  ..._constructors: U
+): Unify.Exclude<InstanceOf<U[number]>, T> => value as Unify.Exclude<InstanceOf<U[number]>, T>;
