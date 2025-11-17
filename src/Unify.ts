@@ -72,6 +72,12 @@ export interface Exclude_<U> extends TypeLambda1 {
 
 export type Exclude<U, Y> = Call1<Exclude_<U>, Y>;
 
+export type Any<U> = [TryGetLambdas<U>] extends [never]
+  ? InstanceOf<U>
+  : ApplyW<TryGetLambdas<U>["make"], any[]>;
+
+type InstanceOf<T> = T extends new (...args: infer __) => infer I ? I : never;
+
 export type Call<U extends Lambdas, Arg> = U extends infer U2 extends Lambdas
   ? [Call1<GetValue<U2>, Arg>] extends [infer R]
     ? [R][R extends any ? 0 : never]

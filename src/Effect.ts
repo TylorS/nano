@@ -1,16 +1,13 @@
-import type {
-  ApplyW,
-  Arg0,
-  Call1,
-  Params,
-  TypeLambda,
-  TypeLambda1,
-} from "hkt-core";
+import type { ApplyW, Params, TypeLambda } from "hkt-core";
 import { type Pipeable, PipeableClass } from "./Function.js";
 import * as Nano from "./Nano.js";
 import * as Iterator from "./Iterator.js";
 import type * as Unify from "./Unify.js";
 
+/**
+ * An Effect represent a yieldable computation that accepts some amount of arguments
+ * and utilizes hkt-core for return type inference.
+ */
 export interface Effect<Tag extends string, Args extends unknown[]>
   extends TypeLambda,
     Pipeable {
@@ -19,20 +16,19 @@ export interface Effect<Tag extends string, Args extends unknown[]>
   [Symbol.iterator](): Iterator<this, ApplyW<this, this["args"]>>;
 }
 
+/**
+ * The constructor for an Effect.
+ */
 export interface EffectConstructor<Tag extends string> {
   readonly _tag: Tag;
 
   is<T extends { readonly _tag: string }, E>(
     this: T,
     effect: E,
-  ): effect is Extract<E, AnyOf<InstanceOf<T>>>;
+  ): effect is Extract<E, Unify.Any<InstanceOf<T>>>;
 
   new <const Args extends unknown[] = []>(...args: Args): Effect<Tag, Args>;
 }
-
-type AnyOf<T> = [Unify.GetUnifiableLambdas<T>] extends [never]
-  ? InstanceOf<T>
-  : ApplyW<Unify.GetUnifiableLambdas<T>["make"], any[]>;
 
 /**
  * Construct effects which implement the Nano interface and utilize hkt-core for return type inference.
@@ -46,8 +42,6 @@ type AnyOf<T> = [Unify.GetUnifiableLambdas<T>] extends [never]
  * ```typescript
  * class Log extends Effect("Log")<unknown[]> {
  *    declare return: void;
- *    // alternatively,
- *    // return!: void;
  * }
  *
  * const log = (...args: readonly unknown[]) => new Log(args);
@@ -68,7 +62,7 @@ export const Effect = <Tag extends string>(tag: Tag): EffectConstructor<Tag> =>
     static is<T extends { readonly _tag: string }, E>(
       this: T,
       effect: E,
-    ): effect is any {
+    ): effect is Extract<E, Unify.Any<InstanceOf<T>>> {
       return isEffectOf.call(this, effect);
     }
     static make(...args: readonly unknown[]) {
@@ -80,9 +74,10 @@ export const Effect = <Tag extends string>(tag: Tag): EffectConstructor<Tag> =>
     }
 
     [Symbol.hasInstance](value: any): value is this {
-      return isEffectOf.call(this as any, value);
+      return isEffectOf.call(this, value);
     }
 
+    /** Type-level only for TypeLambda "implementation" */
     readonly ["~hkt"]!: TypeLambda["~hkt"];
     readonly signature!: TypeLambda["signature"];
   };
@@ -97,19 +92,10 @@ function isEffectOf<
   return (effect as any)._tag === this._tag;
 }
 
-type TypeParameterIdentifier = Capitalize<string>;
-type TypeParameter = [TypeParameterIdentifier, unknown];
-type TypeLambdaMeta = TypeLambda["~hkt"];
-
-interface GenericTypeLambda<TypeParameters extends TypeParameter[]>
-  extends TypeLambda {
-  readonly ["~hkt"]: GenericTypeLambdaMeta<TypeParameters>;
-}
-interface GenericTypeLambdaMeta<TypeParameters extends TypeParameter[]>
-  extends TypeLambdaMeta {
-  readonly tparams: TypeParameters;
-}
-
+/**
+ * A GenericEffect is an Effect which utilize hkt-core's TypeLambdaG abstraction to
+ * represent effects which utilize generic type parameters for computation.
+ */
 export interface GenericEffect<
   Tag extends string,
   TParams extends TypeParameter[],
@@ -120,6 +106,12 @@ export interface GenericEffect<
   [Symbol.iterator](): Iterator<this, ApplyW<this, this["args"]>>;
 }
 
+/**
+ * The constructor for a GenericEffect. Though it is intended to be utilized in an `extends` clause,
+ * it *not* intended to be used as a constructor itself utilizing the `new` keyword. Instead, use the `make`
+ * static method to create a new instance of the effect. This will preserve type-information from the TypeLambdaG
+ * implementation of the Effect.
+ */
 export interface GenericEffectConstructor<
   Tag extends string,
   TParams extends TypeParameter[],
@@ -135,26 +127,8 @@ export interface GenericEffectConstructor<
   >(
     this: T,
     ...args: Args
-  ): Pipe2<Args, InstanceOf<T>, ToNanoWithYield<InstanceOf<T>>>;
+  ): Nano.Nano<InstanceOf<T>, ApplyW<InstanceOf<T>, Args>>;
 }
-
-interface ToNanoWithYield<Y> extends TypeLambda1 {
-  return: Nano.Nano<Y, Arg0<this>>;
-}
-
-type Pipe2<
-  Args extends readonly unknown[],
-  F extends TypeLambda,
-  G extends TypeLambda1,
-> = Call1<G, ApplyW<F, Args>>;
-
-type InstanceOf<T> = T extends new (...args: infer __) => infer I ? I : never;
-type TypeParamDeclaration = TypeParameterIdentifier | TypeParameter;
-type ToTypeParam<T extends TypeParamDeclaration> =
-  T extends TypeParameterIdentifier ? [T, unknown] : T;
-type ToTypeParameters<Params extends Array<TypeParamDeclaration>> = {
-  [K in keyof Params]: ToTypeParam<Params[K]>;
-};
 
 /**
  * For creating generic effects which utilize hkt-core for return type inference. This is identical to creating Generic TypeLambdas in hkt-core,
@@ -176,3 +150,29 @@ export const EffectG =
     tag: Tag,
   ): GenericEffectConstructor<Tag, ToTypeParameters<G>> =>
     Effect(tag) as any;
+
+/** Internal Types */
+
+type InstanceOf<T> = T extends new (...args: infer __) => infer I ? I : never;
+
+//#region Types that could (should?) be exposed by hkt-core
+
+type TypeParameterIdentifier = Capitalize<string>;
+type TypeParameter = [TypeParameterIdentifier, unknown];
+type TypeLambdaMeta = TypeLambda["~hkt"];
+
+interface GenericTypeLambda<TypeParameters extends TypeParameter[]>
+  extends TypeLambda {
+  readonly ["~hkt"]: GenericTypeLambdaMeta<TypeParameters>;
+}
+interface GenericTypeLambdaMeta<TypeParameters extends TypeParameter[]>
+  extends TypeLambdaMeta {
+  readonly tparams: TypeParameters;
+}
+type TypeParamDeclaration = TypeParameterIdentifier | TypeParameter;
+type ToTypeParam<T extends TypeParamDeclaration> =
+  T extends TypeParameterIdentifier ? [T, unknown] : T;
+type ToTypeParameters<Params extends Array<TypeParamDeclaration>> = {
+  [K in keyof Params]: ToTypeParam<Params[K]>;
+};
+//#endregion
