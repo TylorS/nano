@@ -1,12 +1,14 @@
 # @typed/nano
 
-Small DSLs and interpeter utilities atop of iterators and open variants.
+Small DSLs and interpreter utilities built on iterators and effects with powerful type inference via hkt-core.
 
 ## Features
 
-- **Open variants** - Extensible variant types for building DSLs and effect systems
-- **Iterators** - Generator-based composable control flow
-- **Effect system primitives** - Error handling, environment, and state management
+- **Nano** - Composable iterator-based control flow
+- **Effect System** - Type-safe effects with hkt-core integration for automatic return type inference
+- **Generic Effects** - Effects with generic type parameters using TypeLambdaG
+- **Failure Handling** - Integrated error handling with unification
+- **Type Unification** - Automatic type-level simplification of unions
 
 ## Installation
 
@@ -28,12 +30,11 @@ import * as Nano from "@typed/nano";
 
 ### Nano
 
-The core iterable type with a pipeable interface. The intent is that you can `yield`
-arbitrary effects, likely variants, which an interpreter must handle. 
+The core composable iterator type. A `Nano<Y, R>` yields values of type `Y` and returns `R`.
 
 #### `Nano<Y, R>`
 
-Interface representing a composable iterator that yields `Y` and returns `R`.
+Interface representing a composable iterator.
 
 ```typescript
 interface Nano<out Y, out R> extends Pipeable {
@@ -84,16 +85,7 @@ const program = Nano.make(function* () {
   const value = yield* someEffect;
   return value;
 }).pipe(
-  // e.g. migrate effects to newer versions
-  Nano.mapInput((effect) => {
-    if (isV2(effect)) {
-      return toV3(effect);
-    }
-    if (isV1(effect)) {
-      return toV2(effect);
-    }
-    return effect;
-  })
+  Nano.mapInput((effect) => transformEffect(effect))
 );
 ```
 
@@ -114,17 +106,12 @@ Chain Nanos by transforming yield values into other Nanos.
 
 ```typescript
 const program = nano.pipe(
-  Nano.flatMapInput((effect) => Nano.make(function* () {
-    // Utilize a type guard to refine the effect type union
-    if (isSomething(effect)) { 
-      // provide an implementation for the effect
-      yield* Console.log(effect.message); 
-      // The return value is what will be returned back to the calling Nano
-      return
+  Nano.flatMapInput((effect) => {
+    if (isSomething(effect)) {
+      return handleEffect(effect);
     }
-    // otherwise, just yield the effect for somewhere else to handle
-    return yield* effect;
-  }))
+    return Nano.yield(effect);
+  })
 );
 ```
 
@@ -155,8 +142,7 @@ const result = Nano.run(program); // 42
 
 #### `Nano.fromIterator`
 
-Low-level function to create a Nano from an iterator function. It's identical to `Nano.make` but avoids unification.
-This can be necessary/easier when you're programming with generics.
+Low-level function to create a Nano from an iterator function. Identical to `Nano.make` but avoids unification.
 
 ```typescript
 const nano = Nano.fromIterator(() => Nano.Iterator.success(42));
@@ -164,88 +150,85 @@ const nano = Nano.fromIterator(() => Nano.Iterator.success(42));
 
 ---
 
-### Variant
+### Effect
 
-Open variant types for extensible type-safe unions.
+Type-safe effects with automatic return type inference using hkt-core.
 
-#### `variant`
+#### `Effect<Tag, Args>`
 
-Create a variant constructor. Each variant class must extend from its own call to `variant()` with its own unique tag.
-
-```typescript
-class Click extends Nano.variant("Click") {}
-class Hover extends Nano.variant("Hover") {}
-class KeyPress extends Nano.variant("KeyPress") {}
-
-type Action = Click | Hover | KeyPress;
-```
-
-#### `match`
-
-Exhaustive pattern matching on variants.
+An effect represents a yieldable computation that accepts arguments and uses hkt-core for return type inference.
 
 ```typescript
-const handleAction = (action: Action) => action.pipe(Nano.match({
-  Click: (click) => "clicked",
-  Hover: (hover) => "hovered",
-  KeyPress: (press) => "pressed",
-}));
-
-const result = handleAction(new Click()); // "clicked"
+interface Effect<Tag extends string, Args extends unknown[]>
+  extends TypeLambda, Pipeable {
+  readonly _tag: Tag;
+  readonly args: Args;
+  [Symbol.iterator](): Iterator<this, ApplyW<this, this["args"]>>;
+}
 ```
 
-#### `matchOr`
+#### Creating Effects
 
-Partial pattern matching with fallback.
+Use `Effect(tag)` to create an effect constructor:
 
 ```typescript
-const handleAction = (action: Action) => action.pipe(Nano.matchOr(
-  {
-    Click: (click) => "clicked",
-  },
-  (other) => "not clicked"
-));
+class Log extends Effect("Log")<unknown[]> {
+  declare return: void;
+}
 
-const result1 = handleAction(new Click()); // "clicked"
-const result2 = handleAction(new Hover()); // "not clicked"
+const log = (...args: readonly unknown[]) => new Log(args);
 ```
+
+Effects implement `TypeLambda` from hkt-core, so you can use `declare return` to specify the return type based on the arguments:
+
+```typescript
+import type { N } from "ts-toolbelt";
+
+class Add<A extends number, B extends number> extends Effect("Add")<[a: A, b: B]> {
+  declare return: N.Add<Arg0<this>, Arg1<this>>;
+}
+```
+
+#### Generic Effects
+
+For effects that need generic type parameters, use `EffectG`:
+
+```typescript
+/** Define TypeLambdaG type parameters */
+class Split extends EffectG<["Y", "R"]>()("Split") {
+  /** Needed for hkt-core's TypeLambdaG implementation */
+  declare signature: (
+    nano: Nano.Nano<TArg<this, "Y">, TArg<this, "R">>
+  ) => Call1W<Split, typeof nano>;
+
+  /** Needed for hkt-core's TypeLambda implementation */
+  declare return: Nano.Nano.AddYield<Arg0<this>, Split>;
+}
+
+// Use the make method for proper type inference
+const result = Split.make(someNano);
+```
+
+Generic effects use hkt-core's `TypeLambdaG` abstraction, allowing you to:
+- Declare type parameters with `["Param1", "Param2"]`
+- Use `TArg<this, "ParamName">` to reference type parameters
+- Use `Arg0<this>`, `Arg1<this>`, etc. to reference arguments
+- Get automatic type inference via the `make` static method
 
 ---
 
-### Result
+### Failure
 
-Success/Failure types for error handling.
-
-#### `Success<A>`
-
-Represents a successful value.
-
-```typescript
-const success = Nano.success(42);
-```
+Error handling with unification support.
 
 #### `Failure<E>`
 
-Represents a failure with an error.
+Represents a failure with an error value.
 
 ```typescript
-const failure = Nano.failure("Something went wrong");
-```
-
-#### `Result<A, E>`
-
-Union type of `Success<A> | Failure<E>`.
-
-```typescript
-type MyResult = Nano.Result<number, string>;
-```
-
-#### `success`
-
-Create a success value.
-
-```typescript
-const value = Nano.success(42);
+class Failure<E> extends Effect("Failure")<[error: E]> {
+  declare return: never;
+}
 ```
 
 #### `failure`
@@ -253,26 +236,12 @@ const value = Nano.success(42);
 Create a failure value.
 
 ```typescript
-const error = Nano.failure("Error message");
+const error = Nano.failure("Something went wrong");
 ```
 
-#### `isFailure`
+#### `catchFailure`
 
-Type guard to check if a value is a failure.
-
-```typescript
-const result: Nano.Result<number, string> = someOperation();
-
-if (Nano.isFailure(result)) {
-  console.error(result.error);
-} else {
-  console.log(result.value);
-}
-```
-
-#### `result`
-
-Convert a Nano to a Result, handling failures in yields.
+Handle failures in a Nano by transforming them.
 
 ```typescript
 const program = Nano.make(function* () {
@@ -280,231 +249,35 @@ const program = Nano.make(function* () {
   return 42;
 });
 
-const resultNano = Nano.result(program);
-const result = Nano.run(resultNano); // Failure<"error">
+const handled = Nano.catchFailure(program, (error) => {
+  console.error(error.error);
+  return Nano.of(0);
+});
+
+const result = Nano.run(handled); // 0
+```
+
+#### Failure Unification
+
+Failures automatically unify when in unions:
+
+```typescript
+type Unified = Unify<Failure<string> | Failure<number>>;
+// Unified = Failure<string | number>
 ```
 
 ---
 
-### Env & Tag
-
-Environment/dependency injection system using tags.
-
-#### `Env<R>`
-
-Container for environment services.
-
-```typescript
-const env = Nano.Env.empty();
-const env2 = Nano.Env.make(tag, service);
-```
-
-#### `GetEnv<R>`
-
-Represents a request for an environment service.
-
-```typescript
-class Config extends Nano.tag<Config, { apiUrl: string }>("Config") {}
-
-const program = Nano.make(function* () {
-  const { apiUrl } = yield* Config;
-  return apiUrl;
-});
-```
-
-#### `tag`
-
-Create an environment tag (extend as a class).
-
-```typescript
-class Database extends Nano.tag<Database, { query: (sql: string) => unknown }>("Database") {}
-
-// Usage
-const program = Nano.make(function* () {
-  const db = yield* Database;
-  return db.query("SELECT * FROM users");
-});
-
-const env = Database.env({ query: (sql) => [] });
-const result = program.pipe(
-  Nano.provide(env),
-  Nano.withEnv,
-  Nano.run
-);
-```
-
-#### `Env.get`
-
-Get the current environment.
-
-```typescript
-const program = Nano.make(function* () {
-  const env = yield* Env.get<Config>();
-  return env;
-});
-```
-
-#### `Env.provide`
-
-Provide an environment to a Nano.
-
-```typescript
-const env = Config.env({ apiUrl: "https://api.example.com" });
-const programWithEnv = Nano.provide(program, env);
-```
-
-#### `Env.provideAll`
-
-Provide all required environments to a Nano.
-
-```typescript
-const env = Config.env({ apiUrl: "https://api.example.com" });
-const programWithAllEnv = Nano.provideAll(program, env);
-```
-
-#### `Env.withEnv`
-
-Remove all environment requirements from a Nano.
-
-```typescript
-const programWithoutEnv = Nano.withEnv(program);
-```
-
-#### `Env.withTag`
-
-Provide a single tag's service to a Nano.
-
-```typescript
-const programWithTag = Nano.withTag(Config, { apiUrl: "https://api.example.com" })(program);
-```
-
-#### Tag Methods
-
-Tags created with `tag` have the following methods:
-
-##### `Tag.env`
-
-Create an environment from a tag and service.
-
-```typescript
-const env = Config.env({ apiUrl: "https://api.example.com" });
-```
-
-##### `Tag.with`
-
-Provide a tag's service to a Nano.
-
-```typescript
-const programWithTag = Config.with({ apiUrl: "https://api.example.com" })(program);
-```
-
-##### `Tag.use`
-
-Use a tag's service within a Nano.
-
-```typescript
-const program = Config.use((config) => 
-  Nano.of(config.apiUrl)
-);
-```
-
-##### `Tag.update`
-
-Update a tag's service in a Nano.
-
-```typescript
-const program = Config.update(
-  existingProgram,
-  (config) => ({ ...config, apiUrl: "new-url" })
-);
-```
-
-### Refs
-
-Mutable references for state management.
-
-#### `Refs`
-
-The environment tag for refs storage.
-
-```typescript
-class Counter extends Nano.ref(() => 0) {}
-```
-
-#### `ref`
-
-Create a mutable reference.
-
-```typescript
-class Counter extends Nano.ref(() => 0) {}
-
-const program = Nano.make(function* () {
-  yield* Counter.set(10);
-  const value = yield* Counter;
-  return value;
-});
-```
-
-#### `Ref.set`
-
-Set a ref's value.
-
-```typescript
-const program = Counter.set(42);
-```
-
-#### `Ref.update`
-
-Update a ref's value with a function.
-
-```typescript
-const program = Counter.update((x) => x + 1);
-```
-
-#### `Ref.modify`
-
-Modify a ref and return a computed value.
-
-```typescript
-const program = Counter.modify((x) => [x * 2, x + 1] as const);
-// Returns x * 2, sets ref to x + 1
-```
-
-#### `Ref.locally`
-
-Temporarily override a ref's value.
-
-```typescript
-const program = Nano.make(function* () {
-  yield* Counter.set(10);
-  const local = yield* Counter.locally(100)(
-    Nano.make(function* () {
-      return yield* Counter; // 100
-    })
-  );
-  const after = yield* Counter; // 10
-  return [local, after];
-});
-```
-
-#### `withRefs`
-
-Remove refs requirement from a Nano.
-
-```typescript
-const programWithoutRefs = Nano.withRefs(program);
-```
-
 ### Error
 
-Create error constructors that integrate with Result.
+Create custom error classes that integrate with the Failure system.
 
 #### `error`
 
-Create an error constructor.
+Create an error constructor that yields as a Failure.
 
 ```typescript
-const DatabaseError = Error.error<"DatabaseError">();
+export class DatabaseError extends Nano.error<"DatabaseError">()("DatabaseError") {}
 
 const program = Nano.make(function* () {
   yield* new DatabaseError("Connection failed");
@@ -512,98 +285,104 @@ const program = Nano.make(function* () {
 });
 ```
 
-### Emit
+---
 
-Stream events from a Nano program to observers. Emit allows programs to produce a stream of events that can be observed and handled separately from the main computation flow.
+### Unify
 
-#### `Emit<A>`
+Type-level utilities for unifying compatible types in unions.
 
-Represents an emitted event value. It's a variant that implements Nano and yields itself, allowing it to be streamed to observers.
+#### What is Unification?
 
+Unification simplifies unions by merging compatible type parameters. Instead of:
 ```typescript
-const event = Nano.emit("user-clicked");
+Failure<string> | Failure<number> | Failure<boolean>
 ```
 
-#### `emit`
-
-Emit an event value into the stream. Events are yielded during program execution and can be observed by an observer.
-
+Unification produces:
 ```typescript
-const program = Nano.make(function* () {
-  yield* Nano.emit({ type: "started", timestamp: Date.now() });
-  const result = 42;
-  yield* Nano.emit({ type: "completed", result });
-  return result;
-});
+Failure<string | number | boolean>
 ```
 
-#### `isEmit`
+#### `Unify<T>`
 
-Type guard to check if a value is an Emit.
+The `Unify` type operator processes a type and unifies any unifiable types within it.
 
 ```typescript
-const value: unknown = Nano.emit("test");
+import type { Unify, Failure } from "@typed/nano";
 
-if (Nano.isEmit(value)) {
-  console.log(value.value); // "test"
+// Single type - no change
+type A = Unify<Failure<string>>;
+// A = Failure<string>
+
+// Union of same type - parameters merged
+type B = Unify<Failure<string> | Failure<number>>;
+// B = Failure<string | number>
+
+// Different unifiable types - remain separate
+type C = Unify<Failure<string> | SomeOtherEffect<number>>;
+// C = Failure<string> | SomeOtherEffect<number>
+```
+
+#### `unify`
+
+The `unify` function applies unification to function return types.
+
+```typescript
+import { unify } from "@typed/nano";
+
+const getValue = (x: boolean) => 
+  x ? Nano.failure("error") : Nano.failure(42);
+
+const unified = unify(getValue);
+// unified: (x: boolean) => Failure<string | number>
+```
+
+#### Implementing the Unify Protocol
+
+To make your own types unifiable, implement the unify protocol:
+
+```typescript
+import * as Nano from "@typed/nano";
+import type { Arg0, TypeLambda1 } from "hkt-core";
+
+class MyType<A> {
+  constructor(readonly value: A) {}
+  
+  // Mark as unifiable
+  [unifySymbol]?: MyType.Unify;
 }
+
+declare namespace MyType {
+  /** Implement the Unify protocol for MyType */
+  export interface Unify extends Nano.Lambdas {
+    make: Make;
+    get: Get;
+  }
+
+  /** Construct a MyType from a value */
+  export interface Make extends TypeLambda1 {
+    return: MyType<Arg0<this>>;
+  }
+
+  /** 
+   * Get the type parameter from an instance of MyType. 
+   * Passed along directly to Make. 
+   */
+  export interface Get extends TypeLambda1 {
+    return: Arg0<this> extends MyType<infer A> ? [A] : never;
+  }
+
+  // Derive other helpful type functions for iterator yields
+  export type Extract<Y> = Nano.Extract<MyType.Unify, Y>;
+  export type Exclude<Y> = Nano.Exclude<MyType.Unify, Y>;
+}
+
+// Now MyType can be unified
+type Unified = Unify<MyType<string> | MyType<number>>;
+// Unified = MyType<string | number>
 ```
 
-#### `observe`
-
-Subscribe an observer to the stream of emitted events. The observer receives each emitted value as the program executes, and all `Emit` effects are removed from the yield type.
-
-```typescript
-const program = Nano.make(function* () {
-  yield* Nano.emit("Event 1");
-  yield* Nano.emit("Event 2");
-  return 42;
-});
-
-const events: string[] = [];
-
-const programWithObserver = Nano.observe(program, (event) => {
-  events.push(event);
-  return Nano.void;
-});
-
-const result = Nano.run(programWithObserver);
-// result: 42
-// events: ["Event 1", "Event 2"]
-```
-
-You can also use `observe` in a pipeable way:
-
-```typescript
-const program = Nano.make(function* () {
-  yield* Nano.emit({ type: "progress", value: 25 });
-  yield* Nano.emit({ type: "progress", value: 50 });
-  yield* Nano.emit({ type: "progress", value: 75 });
-  return "done";
-}).pipe(
-  Nano.observe((event) => {
-    console.log("Progress:", event.value + "%");
-    return Nano.void;
-  })
-);
-```
-
-The observer can perform side effects, transform events, or even yield other effects:
-
-```typescript
-const program = Nano.make(function* () {
-  yield* Nano.emit("user-action");
-  return "completed";
-}).pipe(
-  Nano.observe((event) => {
-    // Observer can yield other effects
-    return Nano.make(function* () {
-      yield* Logger.log(`Observed: ${event}`);
-      return undefined;
-    });
-  })
-);
-```
+---
 
 ### Iterator
 
@@ -679,209 +458,77 @@ Get the iterator from an iterable.
 const iterator = Nano.Iterator.get(nano);
 ```
 
-#### `Iterator.next`
-
-Create a yield result.
-
-```typescript
-const result = Nano.Iterator.next(42);
-```
-
-#### `Iterator.done`
-
-Create a done result.
-
-```typescript
-const result = Nano.Iterator.done(42);
-```
-
-### Unify
-
-Type-level utilities for unifying types (advanced).
-
-#### What is Unification?
-
-Unification is a type-level operation that simplifies unions by merging compatible type parameters. When you have multiple instances of the same unifiable type with different type parameters, unification combines them into a single instance with a union of those parameters.
-
-For example, instead of:
-```typescript
-Success<string> | Success<number> | Success<boolean>
-```
-
-Unification produces:
-```typescript
-Success<string | number | boolean>
-```
-
-This makes types more manageable and improves type inference in complex scenarios.
-
-#### Why is Unification Useful?
-
-1. **Simplifies Complex Unions**: When working with effect systems or result types, you often end up with unions like `Success<A> | Success<B> | Success<C>`. Unification collapses these into `Success<A | B | C>`, making the types easier to work with.
-
-2. **Better Type Inference**: Simplified types help TypeScript's inference engine work more effectively, reducing the need for explicit type annotations.
-
-3. **Cleaner Type Signatures**: Functions that return unified types have cleaner, more readable signatures.
-
-4. **Protocol-Based**: Only types that implement the unify protocol are affected. Primitives, plain objects, and other non-unifiable types remain unchanged, ensuring no unexpected behavior.
-
-#### How It Works
-
-Unification operates on types that implement the unify protocol (types with a `[unifySymbol]` property). Built-in unifiable types include:
-- `Success<A>` - Unifies to merge success value types
-- `Failure<E>` - Unifies to merge error types  
-- `GetEnv<R>` - Unifies to merge environment requirement types
-- `Emit<A>` - Unifies to merge emitted value types
-
-#### `Unify`
-
-The `Unify` type operator processes a type and unifies any unifiable types within it.
-
-```typescript
-import type { Unify, Success, Failure } from "@typed/nano";
-
-// Single type - no change
-type A = Unify<Success<string>>;
-// A = Success<string>
-
-// Union of same type - parameters merged
-type B = Unify<Success<string> | Success<number>>;
-// B = Success<string | number>
-
-// Different unifiable types - remain separate
-type C = Unify<Success<string> | Failure<Error>>;
-// C = Success<string> | Failure<Error>
-
-// Mixed with non-unifiable types - only unifiable types unified
-type D = Unify<Success<string> | number>;
-// D = Success<string> | number
-
-// Nested structures are processed recursively
-type E = Unify<Success<Success<string> | Success<number>>>;
-// E = Success<Success<string | number>>
-```
-
-#### `unify`
-
-The `unify` function applies unification to function return types, making it easy to unify functions that return unifiable types.
-
-```typescript
-import { unify } from "@typed/nano";
-import { success } from "@typed/nano";
-
-// Function that returns Success<string> | Success<number>
-const getValue = (x: boolean) => 
-  x ? success("hello") : success(42);
-
-// Unify the return type
-const unified = unify(getValue);
-// unified: (x: boolean) => Success<string | number>
-
-// Now you can use it with better type inference
-const result = unified(true);
-// result: Success<string | number>
-```
-
-#### Implementing the Unify Protocol
-
-To make your own types unifiable, implement the unify protocol:
-
-```typescript
-import { unifySymbol } from "@typed/nano";
-import type { Arg0, TypeLambda1 } from "hkt-core";
-import type { Unify, Lambdas } from "@typed/nano";
-
-class MyType<A> {
-  constructor(readonly value: A) {}
-  
-  // Mark as unifiable
-  [unifySymbol]?: MyType.Unify;
-}
-
-declare namespace MyType {
-  export interface Unify extends Lambdas {
-    make: Make;
-    get: Get;
-  }
-
-  export interface Make extends TypeLambda1 {
-    return: MyType<Arg0<this>>;
-  }
-
-  export interface Get extends TypeLambda1 {
-    return: Arg0<this> extends MyType<infer A> ? [A] : never;
-  }
-}
-
-// Now MyType can be unified
-type Unified = Unify<MyType<string> | MyType<number>>;
-// Unified = MyType<string | number>
-```
+---
 
 ## Examples
 
-### Building a Closed Effect System
+### Building an Effect System
 
 ```typescript
-import * as Nano from "@typed/nano";
-
-// Define a closed Effect type
-interface Effect<A, E = never, R = never>
-  extends Nano.Nano<Nano.Failure<E> | Nano.GetEnv<R | Nano.Refs>, A> {}
-
-// Helper to run effects
-const runEffect = <A, E, R = never>(
-  effect: Effect<A, E, R>,
-  ...[env]: [R] extends [never] ? [] : [Nano.Env<R>]
-): Nano.Result<A, E> => {
-  return effect.pipe(
-    Nano.provideAll((env || Nano.Env.empty()).merge(Nano.Refs.empty())),
-    Nano.result,
-    Nano.run,
-  );
-};
-
-// Create environment tags
-class Logger extends Nano.tag<Logger, { log: (msg: string) => void }>("Logger") {}
-
-// Create refs
-class Counter extends Nano.ref(() => 0) {}
-
-// Build effect programs
-const program = Nano.make(function* () {
-  yield* Counter.set(5);
-  const count = yield* Counter;
-  const logger = yield* Logger;
-  logger.log(`Count is ${count}`);
-  return `Final count: ${count}`;
-});
-
-// Run with environment
-const logs: string[] = [];
-const env = Logger.env({ log: (msg) => logs.push(msg) });
-const result = runEffect(program, env);
-```
-
-### Pattern Matching
-
-```typescript
-import * as Nano from "@typed/nano";
-
-class Click extends Nano.variant("Click") {}
-class Hover extends Nano.variant("Hover") {}
-class KeyPress extends Nano.variant("KeyPress") {
-  constructor(readonly key: string) {
-    super();
-  }
+// Define effects
+class Log extends Nano.Effect("Log")<[message: string]> {
+  declare return: void;
 }
 
-type Action = Click | Hover | KeyPress;
+class ReadFile extends Nano.Effect("ReadFile")<[path: string]> {
+  declare return: string;
+}
 
-const handleAction = (action: Action) => action.pipe(Nano.match({
-  Click: () => "clicked",
-  Hover: () => "hovered",
-  KeyPress: (press) => `pressed ${press.key}`,
-}));
+class WriteFile extends Nano.Effect("WriteFile")<
+  [path: string, content: string]
+> {
+  declare return: void;
+}
 
-const result = handleAction(new KeyPress("Enter")); // "pressed Enter"
+// Helper functions
+const log = (message: string) => new Log(message);
+const readFile = (path: string) => new ReadFile(path);
+const writeFile = (path: string, content: string) =>
+  new WriteFile(path, content);
+
+// Build a program
+const program = Nano.make(function* () {
+  yield* log("Reading file...");
+  const content = yield* readFile("input.txt");
+  yield* log("Writing file...");
+  yield* writeFile("output.txt", content.toUpperCase());
+  yield* log("Done!");
+  return content.length;
+});
+
+type MyYield = Log | ReadFile | WriteFile;
+
+// Implement an interpreter
+const runProgram = (program: Nano.Nano<MyYield, number>) =>
+  Nano.flatMapInput(program, (effect) => {
+    if (Log.is(effect)) return Nano.sync(() => console.log(...effect.args));
+    if (WriteFile.is(effect)) return Nano.sync(() => fs.writeFileSync(...effect.args))
+    if (ReadFile.is(effect)) return Nano.sync(() => fs.readFileSync(...effect.args, 'utf-8'))
+    throw new Error(`Unknown effect: ${effect}`);
+  });
+
+const result = runProgram(program);
+console.log(result); // File content length
+
+```
+
+### Generic Effects
+
+```typescript
+import * as Nano from "@typed/nano";
+import type { TArg, Arg0, Call1W } from "hkt-core";
+
+// Generic effect that works with any Nano type
+class Split extends Nano.EffectG<["Y", "R"]>()("Split") {
+  declare signature: (
+    nano: Nano.Nano<TArg<this, "Y">, TArg<this, "R">>
+  ) => Call1W<Split, typeof nano>;
+  declare return: Nano.Nano.AddYield<Arg0<this>, Split>;
+}
+
+// Use with proper type inference
+const program = Nano.make(function* () {
+  const result = yield* Split.make(Nano.of(42));
+  return result;
+});
 ```

@@ -9,7 +9,7 @@ export class Failure<E> extends Effect("Failure")<[error: E]> {
 }
 
 export declare namespace Failure {
-  export interface Unify extends Unify.Lambdas {
+  export interface Unify extends Unify.Unification {
     make: Make;
     get: Get;
   }
