@@ -45,7 +45,7 @@ export const isResult = <A = any, E = any>(u: unknown): u is Result<A, E> =>
 
 export type Result<A, E = never> = Success<A> | Failure<E>;
 
-declare namespace Result {
+export declare namespace Result {
   export type Extract<Y> = Failure.Extract<Y> | Success.Extract<Y>;
   export type Exclude<Y> = Failure.Exclude<Y> | Success.Exclude<Y>;
   export type Error<Y> = Failure.Error<Y>;
