@@ -4,6 +4,7 @@ export * from "./Failure.js";
 export * from "./Function.js";
 export * from "./Nano.js";
 export * from "./Unify.js";
+export * from "./Result.js";
 
 export * as Iterator from "./Iterator.js";
 export type * from "hkt-core";

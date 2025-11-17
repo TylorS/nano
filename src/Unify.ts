@@ -26,7 +26,7 @@ type FilterOut<A> = A extends {
   : A;
 
 interface PerformUnification extends TypeLambda1 {
-  return: Call<GetUnification<Arg0<this>>, Arg0<this>>;
+  return: Call<Arg0<this>, Arg0<this>>;
 }
 
 export type GetUnification<A> = A extends {
@@ -46,40 +46,23 @@ export type Unification = {
   readonly make: TypeLambda;
 };
 
-interface GetValue<U extends Unification> extends TypeLambda1 {
+export interface Extract_<U extends Unification> extends TypeLambda1 {
   readonly return: ApplyW<
     U["make"],
     Call1<U["get"], globalThis.Extract<Arg0<this>, ApplyW<U["make"], any[]>>>
   >;
 }
 
-export interface Extract_<Union> extends TypeLambda1 {
-  readonly return: globalThis.Extract<Union, AnyOf<Arg0<this>>>;
-}
-
-export type Extract<U, Y> = Call1<Extract_<U>, AnyOf<Y>>;
+export type Extract<U, Y> = Call1<Extract_<GetUnification<U>>, Y>;
 
 export interface Exclude_<U> extends TypeLambda1 {
-  return: globalThis.Exclude<U, AnyOf<Arg0<this>>>;
+  return: globalThis.Exclude<Arg0<this>, Extract<U, Arg0<this>>>;
 }
 
 export type Exclude<U, Y> = Call1<Exclude_<U>, Y>;
 
-export interface AnyOf_<U> extends TypeLambda1 {
-  readonly return: ApplyW<GetUnification<U>["make"], any[]>;
-}
-
-export type AnyOf<U> = [GetUnification<U>] extends [never]
-  ? InstanceOf<U>
-  : Call1<AnyOf_<U>, InstanceOf<U>>;
-
-type InstanceOf<T> = T extends new (...args: infer __) => infer I ? I : T;
-
-export type Call<U extends Unification, Arg> = U extends infer U2 extends
-  Unification
-  ? [Call1<GetValue<U2>, Arg>] extends [infer R]
-    ? [R][R extends any ? 0 : never]
-    : never
+export type Call<U, Arg> = [Extract<U, Arg>] extends [infer R]
+  ? [R][R extends any ? 0 : never]
   : never;
 
 export const unify: {

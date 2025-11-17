@@ -24,11 +24,31 @@ export declare namespace Failure {
 
   export type Extract<Y> = Unify.Extract<Failure.Unify, Y>;
   export type Exclude<Y> = Unify.Exclude<Failure.Unify, Y>;
+
+  export type Error<Y> = Y extends Failure<infer E> ? E : never;
 }
 
 export const failure = <E>(error: E): Failure<E> => new Failure(error);
 
-export const catchFailure = <Y, R, N2 extends Nano.Any>(
+export const catchFailure: {
+  <Y, R, N2 extends Nano.Any>(
+    nano: Nano.Nano<Y, R>,
+    onFailure: (error: Failure.Extract<Y>) => N2,
+  ): Nano.Nano<Failure.Exclude<Y> | Nano.Yield<N2>, R | Nano.Return<N2>>;
+  <Y, R, N2 extends Nano.Any>(
+    onFailure: (error: Failure.Extract<Y>) => N2,
+  ): (
+    nano: Nano.Nano<Y, R>,
+  ) => Nano.Nano<Failure.Exclude<Y> | Nano.Yield<N2>, R | Nano.Return<N2>>;
+} = function (): any {
+  if (arguments.length === 1) {
+    return (nano: Nano.Nano<any, any>) => catchFailure_(nano, arguments[0]);
+  } else {
+    return catchFailure_(arguments[0], arguments[1]);
+  }
+};
+
+const catchFailure_ = <Y, R, N2 extends Nano.Any>(
   nano: Nano.Nano<Y, R>,
   onFailure: (error: Failure.Extract<Y>) => N2,
 ): Nano.Nano<Failure.Exclude<Y> | Nano.Yield<N2>, R | Nano.Return<N2>> =>
