@@ -1,5 +1,6 @@
 import type { ApplyW, Arg0, Call1, TypeLambda, TypeLambda1 } from "hkt-core";
 import { identity } from "./Function.js";
+import type { A } from "ts-toolbelt";
 
 export const unifySymbol = Symbol.for("nano/unify");
 export type unifySymbol = typeof unifySymbol;
@@ -51,17 +52,19 @@ interface GetValue<U extends Lambdas> extends TypeLambda1 {
   >;
 }
 
-type TryGetLambdas<U> = U extends Lambdas
-  ? U
-  : U extends GetUnifiableLambdas<infer U2 extends Lambdas>
+export type TryGetLambdas<U> =
+  GetUnifiableLambdas<U> extends infer U2 extends Lambdas
     ? U2
-    : never;
+    : U extends Lambdas
+      ? U
+      : never;
 
 export interface Extract_<U> extends TypeLambda1 {
   readonly return: Call<TryGetLambdas<U>, Arg0<this>>;
 }
 
-export type Extract<U, Y> = Call1<Extract_<U>, Y>;
+export type Extract<U, Y> =
+  A.Equals<[Y], [any]> extends 1 ? Any<Y> : Call1<Extract_<U>, Any<Y>>;
 
 export interface Exclude_<U> extends TypeLambda1 {
   readonly return: globalThis.Exclude<
@@ -70,13 +73,15 @@ export interface Exclude_<U> extends TypeLambda1 {
   >;
 }
 
-export type Exclude<U, Y> = Call1<Exclude_<U>, Y>;
+export type Exclude<U, Y> = Call1<Exclude_<U>, Any<Y>>;
 
-export type Any<U> = [TryGetLambdas<U>] extends [never]
-  ? InstanceOf<U>
-  : ApplyW<TryGetLambdas<U>["make"], any[]>;
+export interface Any_<U> extends TypeLambda1 {
+  readonly return: ApplyW<TryGetLambdas<U>["make"], any[]>;
+}
 
-type InstanceOf<T> = T extends new (...args: infer __) => infer I ? I : never;
+export type Any<U> = Call1<Any_<U>, InstanceOf<U>>;
+
+type InstanceOf<T> = T extends new (...args: infer __) => infer I ? I : T;
 
 export type Call<U extends Lambdas, Arg> = U extends infer U2 extends Lambdas
   ? [Call1<GetValue<U2>, Arg>] extends [infer R]

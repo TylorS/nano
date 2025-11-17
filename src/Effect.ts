@@ -25,7 +25,7 @@ export interface EffectConstructor<Tag extends string> {
   is<T extends { readonly _tag: string }, E>(
     this: T,
     effect: E,
-  ): effect is Extract<E, Unify.Any<InstanceOf<T>>>;
+  ): effect is Unify.Extract<InstanceOf<T>, E>;
 
   new <const Args extends unknown[] = []>(...args: Args): Effect<Tag, Args>;
 }
@@ -62,7 +62,7 @@ export const Effect = <Tag extends string>(tag: Tag): EffectConstructor<Tag> =>
     static is<T extends { readonly _tag: string }, E>(
       this: T,
       effect: E,
-    ): effect is Extract<E, Unify.Any<InstanceOf<T>>> {
+    ): effect is Unify.Extract<InstanceOf<T>, E> {
       return isEffectOf.call(this, effect);
     }
     static make(...args: readonly unknown[]) {
@@ -87,7 +87,7 @@ function isEffectOf<
     readonly _tag: string;
   },
   E,
->(this: T, effect: E): effect is Extract<E, InstanceOf<T>> {
+>(this: T, effect: E): effect is Unify.Extract<InstanceOf<T>, E> {
   if (effect === undefined || effect === null) return false;
   return (effect as any)._tag === this._tag;
 }
