@@ -53,17 +53,17 @@ export interface Extract_<U extends Unification> extends TypeLambda1 {
   >;
 }
 
-export type Extract<U, Y> = Call1<Extract_<GetUnification<U>>, Y>;
+export type Call<U, Arg> = U extends infer U2
+  ? Call1<Extract_<GetUnification<U2>>, Arg>
+  : never;
+
+export type Extract<U, Y> = Call<U, Y>;
 
 export interface Exclude_<U> extends TypeLambda1 {
   return: globalThis.Exclude<Arg0<this>, Extract<U, Arg0<this>>>;
 }
 
 export type Exclude<U, Y> = Call1<Exclude_<U>, Y>;
-
-export type Call<U, Arg> = [Extract<U, Arg>] extends [infer R]
-  ? [R][R extends any ? 0 : never]
-  : never;
 
 export const unify: {
   <

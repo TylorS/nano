@@ -1,24 +1,10 @@
-import type { Arg0, Arg1, TypeLambda1, TypeLambda2 } from "hkt-core";
+import type { Arg0, TypeLambda1 } from "hkt-core";
+import { Effect } from "./Effect.js";
 import { catchFailure, Failure } from "./Failure.js";
-import * as Unify from "./Unify.js";
 import * as Nano from "./Nano.js";
-import * as Iterator from "./Iterator.js";
-import { PipeableClass } from "./Function.js";
+import * as Unify from "./Unify.js";
 
-export class Success<A> extends PipeableClass implements Nano.Nano<never, A> {
-  static readonly _tag = "Success" as const;
-  readonly _tag = Success._tag;
-  constructor(readonly value: A) {
-    super();
-  }
-  [Symbol.iterator](): Iterator<never, A> {
-    return Iterator.success(this.value);
-  }
-
-  [Symbol.hasInstance](value: unknown): value is Success<A> {
-    return value ? (value as any)._tag === Success._tag : false;
-  }
-
+export class Success<A> extends Effect("Success")<[value: A]> {
   declare [Unify.unifySymbol]: Success.Unify;
 }
 
@@ -38,6 +24,8 @@ export namespace Success {
 
   export type Extract<Y> = Unify.Extract<Success.Unify, Y>;
   export type Exclude<Y> = Unify.Exclude<Success.Unify, Y>;
+
+  export type Value<Y> = Y extends Success<infer A> ? A : never;
 }
 
 export const success = <A>(value: A): Success<A> => new Success(value);
@@ -58,24 +46,13 @@ export const isResult = <A = any, E = any>(u: unknown): u is Result<A, E> =>
 export type Result<A, E = never> = Success<A> | Failure<E>;
 
 declare namespace Result {
-  export interface Unify extends Unify.Unification {
-    make: Make;
-    get: Get;
-  }
-
-  export interface Make extends TypeLambda2 {
-    return: Result<Arg0<this>, Arg1<this>>;
-  }
-
-  export interface Get extends TypeLambda1 {
-    return: Arg0<this> extends Result<infer A, infer E> ? [A, E] : never;
-  }
-
-  export type Extract<Y> = Unify.Extract<Result.Unify, Y>;
-  export type Exclude<Y> = Unify.Exclude<Result.Unify, Y>;
+  export type Extract<Y> = Failure.Extract<Y> | Success.Extract<Y>;
+  export type Exclude<Y> = Failure.Exclude<Y> | Success.Exclude<Y>;
+  export type Error<Y> = Failure.Error<Y>;
+  export type Value<Y> = Success.Value<Y>;
 }
 
 export const result = <Y, R>(
   nano: Nano.Nano<Y, R>,
-): Nano.Nano<Failure.Exclude<Y>, Result<R, Failure.Error<Y>>> =>
+): Nano.Nano<Result.Exclude<Y>, Result<R, Failure.Error<Y>>> =>
   nano.pipe(Nano.map(success), catchFailure(Nano.of));
